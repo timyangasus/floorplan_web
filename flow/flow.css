@@ -374,19 +374,16 @@ svg { display: block; }
 .gauges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
 .gauge-card { background: var(--card); padding: 22px; cursor: pointer; transition: background .15s; display: flex; flex-direction: column; }
 .gauge-card:hover { background: #fbfcfd; }
-.gauge-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.gauge-head { display: flex; justify-content: flex-end; align-items: center; gap: 8px; min-height: 22px; }
 .gauge-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.gauge-img { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; border-radius: 12px; background: var(--panel); padding: 4px; }
 .title-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
-/* Name and subtitle are one line each so every card's ring sits at the same height */
-.gauge-name { font-size: 20px; margin-top: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Name and subtitle are one line each so every card's photo sits at the same height */
+.gauge-name { font-size: 20px; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gauge-sub { color: var(--ink-3); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gauge-body { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
-.ring { position: relative; width: 116px; height: 116px; flex-shrink: 0; }
-.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-.ring-val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.ring-val b { font-size: 34px; font-weight: 300; line-height: 1; }
-.ring-val span { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+.gauge-photo { width: 124px; height: 124px; flex-shrink: 0; border-radius: 16px; background: radial-gradient(circle at 50% 40%, #ffffff 0%, #eef1f5 75%); display: grid; place-items: center; }
+.gauge-photo img { width: 88%; height: 88%; object-fit: contain; filter: drop-shadow(0 8px 14px rgba(20, 30, 50, .14)); transition: transform .25s; }
+.gauge-card:hover .gauge-photo img { transform: scale(1.05); }
 .gauge-facts { list-style: none; margin: 0; padding: 0; font-size: 13px; color: var(--ink-2); }
 .gauge-facts li { position: relative; padding-left: 12px; margin: 5px 0; white-space: nowrap; }
 .gauge-facts li::before { content: ""; position: absolute; left: 0; top: 9px; width: 4px; height: 4px; border-radius: 50%; background: var(--ink-2); }
@@ -414,8 +411,6 @@ svg { display: block; }
 .bundle:first-child .bundle-rank { color: var(--accent); }
 .bundle-name { font-size: 17px; }
 .bundle-meta { color: var(--ink-3); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 2px; }
-.bundle-bar { height: 4px; background: #e6e9ed; border-radius: 4px; margin-top: 10px; max-width: 420px; }
-.bundle-bar span { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #6fb5ff, #1982ff); }
 .bundle-units { text-align: right; }
 .bundle-units b { font-size: 34px; font-weight: 300; }
 .bundle-units small { color: var(--ink-3); font-size: 14px; margin-left: 2px; }

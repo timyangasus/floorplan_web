@@ -258,11 +258,6 @@
     };
   }
 
-  function ring(value, color) {
-    const r = 56, c = 2 * Math.PI * r, v = Math.max(0, Math.min(100, value));
-    return `<svg viewBox="0 0 132 132"><circle cx="66" cy="66" r="${r}" fill="none" stroke="#eef0f3" stroke-width="7"/><circle cx="66" cy="66" r="${r}" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${c * v / 100} ${c}"/></svg>`;
-  }
-  const ringColors = ['#1982ff', '#4f9dff', '#7bb6ff', '#a5ccff'];
 
   // ── 2_010 Results ──
   function renderResults(el) {
@@ -275,9 +270,9 @@
       ${u.country !== 'TW' ? '<div class="card empty" style="margin-top:24px">此地區尚未建立價表與可推薦機種，請改選台灣。</div>' : `
       <div class="section-head"><div><h2>推薦機種排行</h2><div class="muted small">每型號一筆 · 已納入你的面積與樓層 · 點卡片看詳情</div></div></div>
       ${top4.length ? `<div class="gauges">${top4.map((m, i) => `<div class="gauge-card" data-model="${esc(m.id)}">
-        <div class="gauge-head"><img class="gauge-img" src="${productImg(m.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><div class="gauge-tags">${m.active ? '<span class="tag tag-promo">本期主打</span>' : ''}${rankTag(i + 1)}</div></div>
+        <div class="gauge-head"><div class="gauge-tags">${m.active ? '<span class="tag tag-promo">本期主打</span>' : ''}${rankTag(i + 1)}</div></div>
         <div class="gauge-name" title="${esc(m.id)}">${esc(m.id)}</div><div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div>
-        <div class="gauge-body"><div class="ring">${ring(m.Z, ringColors[i])}<div class="ring-val"><b>${m.Z.toFixed(0)}</b><span>綜合分</span></div></div>
+        <div class="gauge-body"><div class="gauge-photo"><img src="${productImg(m.id)}" alt="${esc(m.id)}" loading="lazy" onerror="this.style.visibility='hidden'"></div>
         <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>最少 ${m.N} 台</li><li>${m.m.ai ? 'AI 核心' : '一般核心'}</li></ul></div>
         <div class="gauge-foot">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}${bundles.some(b => b.r.id === m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">在我家試擺</button>` : ''}</div></div>`).join('')}</div>
         ${rest.length ? `<div class="more-models">${rest.map((m, i) => `<button data-model="${esc(m.id)}">${rankTag(i + 5)}<span>${esc(m.id)}</span></button>`).join('')}</div>` : ''}` : '<div class="card empty">沒有符合目前品牌／定位與空間條件的機種，請調整條件。</div>'}
@@ -287,10 +282,10 @@
         <div class="bundle-rank">${String(i + 1).padStart(2, '0')}</div>
         <div><div class="bundle-name">${esc(b.r.id)}${b.N > 1 ? ` <span class="muted">＋ ${esc(b.n.id)}</span>` : ''}${i === 0 ? ' <span class="tag tag-rank1" title="最推薦">★</span>' : ''}</div>
           <div class="bundle-meta"><span>${b.N === 1 ? '單機' : 'AiMesh'}</span><span>WiFi ${b.r.wifi}</span><span>各樓層 ${b.floorUnits.join(' / ')} 台</span><span>${esc(E.tierNames[b.r.positioning] || '')}</span>${b.boost || b.reserved ? '<span class="tag tag-promo">本期主打</span>' : ''}</div>
-          <div class="bundle-bar"><span style="width:${Math.max(4, Math.min(100, b.Z))}%"></span></div></div>
+          </div>
         <div class="bundle-units"><b>${b.N}</b><small>台</small><div>${b.N > 1 ? `主機 1 ＋ Node ${b.N - 1}` : '主機 1'}</div></div>
         <button class="btn btn-sm" data-try="${i}">在我家試擺</button>
-        <details><summary>推薦理由與限制</summary>能力適配 ${b.U.toFixed(1)} 分；台數是此面積與樓層下的最低預估，不是實測保證。${u.bh === 'wired' ? '有線' : '無線'}回程與混搭相容仍待驗證。</details>
+        <details><summary>推薦理由與限制</summary>依你選的用途與在意的功能評估；台數是此面積與樓層下的最低預估，不是實測保證。${u.bh === 'wired' ? '有線' : '無線'}回程與混搭相容仍待驗證。</details>
       </div>`).join('')}</div>` : '<div class="card empty">沒有符合條件的配置套組，請調整條件。</div>'}
 
       <div class="cta-band"><div><h3>想知道放在家裡哪裡最好？</h3><p>把第一名套組放進你家的平面圖，看每個房間的訊號覆蓋。</p></div><button class="btn" id="cta" ${bundles.length ? '' : 'disabled'}>開始居家配置 →</button></div>
