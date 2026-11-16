@@ -686,6 +686,8 @@
         if (state.loadedPlanId !== cur.id) fresh = loadPlanIntoApp(cur);
       }
     }
+    // Plans whose 推薦紀錄 was deleted (其他方案) stay as they are: no 試其他套組.
+    const orphan = !!plan && !recOf(plan);
     const ids = plan ? plan.bundleId.split('|') : [];
     const mapped = ids.slice(0, 2).filter((id, i, a) => id && a.indexOf(id) === i && FP_MODEL[id] && FP_MODEL[id] !== id);
     // Devices sit on different floors; the app only shows one floor at a time, so offer a floor switcher.
@@ -698,11 +700,11 @@
           ${floorList.length ? `<div class="fp-floors">${floorList.map((f, i) => `<button class="fp-floor${i === 0 ? ' on' : ''}" data-floor="${f.id}"><b>${f.name}</b>${esc(f.devices.join('、'))}</button>`).join('')}</div>` : ''}</div>
         <span class="spacer"></span>
         ${plan && b ? '<button class="link-btn fp-reset" id="reseed">重置擺放</button>' : ''}
-        <button class="btn btn-sm" id="swap">${plan ? '試其他套組' : '先看推薦'}</button>
+        ${orphan ? '' : `<button class="btn btn-sm" id="swap">${plan ? '試其他套組' : '先看推薦'}</button>`}
       </div>
       <iframe class="fp-frame" id="fpFrame" title="ASUS WiFi Floorplan" src="${FP_SRC}${fresh ? '?t=' + Date.now() : ''}"></iframe>
     </div>`;
-    $('swap').onclick = () => go('results');
+    if ($('swap')) $('swap').onclick = () => go('results');
     if ($('reseed')) $('reseed').onclick = async () => {
       if (!await askConfirm('重置擺放？', '機器會回到預設位置，你調整過的位置會被取代；牆和平面圖會保留。', '重置')) return;
       capturePlan();
@@ -873,10 +875,12 @@
     const max = unlocked();
     const hints = ['填完 3 題就能看推薦', '', '拖曳調整位置，查看訊號覆蓋'];
     const finished = i => (i === 0 ? state.prefsDone : i === 1 ? !!state.bundleId : false);
+    const op = activePlan(), orphanOpen = s.id === 'floorplan' && op && state.loadedPlanId === op.id && !recOf(op);
     nav.innerHTML = FLOW.map((f, i) => {
       const cls = i === cur ? 'current' : i <= max ? 'done' : 'locked';
+      const off = cls === 'locked' || (orphanOpen && i < cur);
       return (i ? `<span class="fs-line${finished(i - 1) ? ' done' : ''}"></span>` : '')
-        + `<button class="fs-step ${cls}" data-to="${f.to}" ${cls === 'locked' ? 'disabled' : ''} title="${cls === 'locked' ? '請先完成前一步' : f.label}"><span class="fs-dot">${i !== cur && finished(i) ? '✓' : i + 1}</span><span class="fs-label">${f.label}</span></button>`;
+        + `<button class="fs-step ${cls}" data-to="${f.to}" ${off ? 'disabled' : ''} title="${cls === 'locked' ? '請先完成前一步' : orphanOpen && i < cur ? '此方案的推薦紀錄已刪除' : f.label}"><span class="fs-dot">${i !== cur && finished(i) ? '✓' : i + 1}</span><span class="fs-label">${f.label}</span></button>`;
     }).join('') + (state.newPlanFrom && cur < 2
       ? `<span class="fs-hint fs-newplan">新增方案中：沿用「${esc((store.plans.find(x => x.id === state.newPlanFrom) || {}).name || '')}」的格局 <button class="link-btn" id="cancelNew">取消</button></span>`
       : `<span class="fs-hint">${hints[cur]}</span>`);
