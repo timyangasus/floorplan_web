@@ -448,6 +448,11 @@
     document.title = 'ASUS WiFi 規劃';
   }
   if (new URLSearchParams(location.search).get('demo') === '0') document.body.classList.add('no-demo');
-  window.addEventListener('hashchange', render);
-  render();
+  // '#try' = free floor plan trial without a recommendation (used by the landing page)
+  function route() {
+    if (location.hash === '#try') { state.bundleId = null; state.seededKey = 'blank'; save(); clearFloorplanProject(); location.replace('#floorplan'); return; }
+    render();
+  }
+  window.addEventListener('hashchange', route);
+  route();
 })();
