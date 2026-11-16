@@ -518,3 +518,40 @@ svg { display: block; }
   .bundle-units, .bundle .btn { grid-column: 2; text-align: left; justify-self: start; }
   .demo-bar-desc { display: none; }
 }
+
+/* ── 我的規劃 ── */
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 26px; }
+.plan-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; text-align: left; border: 2px solid transparent; }
+.plan-card.current { border-color: var(--accent); }
+.plan-thumb { position: relative; height: 150px; background: linear-gradient(180deg, #f6f8fb, #eef1f5); display: grid; place-items: center; padding: 14px; }
+.plan-thumb svg, .plan-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.plan-current { position: absolute; top: 10px; left: 10px; }
+.plan-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.plan-name-row { display: flex; align-items: center; gap: 6px; }
+.plan-name { font-size: 18px; font-weight: 500; }
+.plan-name-input { font-size: 18px; font-weight: 500; border: 0; border-bottom: 1.5px solid var(--accent); outline: none; padding: 0 0 2px; width: 100%; background: transparent; }
+.plan-icon { width: 28px; height: 28px; border-radius: 8px; color: var(--ink-3); display: inline-grid; place-items: center; font-size: 14px; }
+.plan-icon:hover { background: var(--panel); color: var(--ink); }
+.plan-meta { font-size: 13px; color: var(--ink-2); }
+.plan-actions { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 14px; }
+.plan-actions .try-link { margin: 0; }
+.plan-del { margin-left: auto; }
+.plan-new { align-items: center; justify-content: center; gap: 6px; min-height: 280px; border: 2px dashed #c8d2de; background: transparent; box-shadow: none; padding: 20px; text-align: center; }
+.plan-new:hover { border-color: var(--accent); background: var(--accent-soft); }
+.plan-new-plus { font-size: 34px; line-height: 1; color: var(--accent); }
+
+/* Home: recent plans */
+.recent { margin-top: 28px; max-width: 760px; }
+.recent-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.recent-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.recent-item { display: flex; align-items: center; gap: 12px; text-align: left; background: var(--card); border-radius: 14px; padding: 10px 14px 10px 10px; box-shadow: var(--shadow); transition: transform .15s; }
+.recent-item:hover { transform: translateY(-2px); }
+.recent-thumb { width: 56px; height: 44px; flex-shrink: 0; border-radius: 8px; background: var(--panel); display: grid; place-items: center; padding: 4px; }
+.recent-thumb svg, .recent-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.recent-body { display: flex; flex-direction: column; min-width: 0; }
+.recent-body .quick-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Floor plan bar: plan name + new-plan hint in stepper */
+.fp-plan-name { display: inline-block; font-size: 12px; font-weight: 600; color: var(--accent-2); background: var(--accent-soft); border-radius: 999px; padding: 2px 10px; margin-right: 8px; vertical-align: middle; }
+.fs-newplan { color: var(--accent-2); }
+.fs-newplan .link-btn { margin-left: 8px; font-size: 13px; }

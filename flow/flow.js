@@ -31,6 +31,7 @@
 
   // ── Icons ──
   const I = {
+    plans: '<svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M8 13.5 12 10.5l4 3M9.5 12.4V16h5v-3.6"/></svg>',
     home: '<svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v8.5a.5.5 0 0 1-.5.5H15v-6H9v6H4.5a.5.5 0 0 1-.5-.5z"/></svg>',
     prefs: '<svg viewBox="0 0 24 24"><path d="M6 4v6M6 14v6M12 4v2M12 10v10M18 4v10M18 18v2M4 12h4M10 8h4M16 16h4"/></svg>',
     rank: '<svg viewBox="0 0 24 24"><path d="M5 20v-6M12 20V6M19 20v-9M3 20h18"/></svg>',
@@ -63,14 +64,15 @@
 
   // ── Screens ──
   const SCREENS = [
-    { id: 'home', code: '0_010', rail: 'home', description: '首頁：大字標題＋「開始規劃」主按鈕（有進度時下方可繼續），下方為功能 banner', render: renderHome },
+    { id: 'home', code: '0_010', rail: 'home', description: '首頁：大字標題＋「開始規劃」主按鈕，有方案時顯示最近的方案，下方為功能 banner', render: renderHome },
     { id: 'needs', code: '1_010', rail: 'prefs', description: '偏好 1/3：主要用途（可複選，標記最重要的一項）', render: renderNeeds },
     { id: 'care', code: '1_020', rail: 'prefs', description: '偏好 2/3：還在意什麼、外觀、品牌與產品定位', render: renderCare },
     { id: 'home-size', code: '1_030', rail: 'prefs', description: '偏好 3/3：我家的樣子（面積、樓層、回程、地區）', render: renderHomeSize },
     { id: 'results', code: '2_010', rail: 'rank', description: '推薦結果：機種排行＋配置套組 Top 10。兩條路：在我家試擺（約 70%）／購物車前往購買（約 30%）', render: renderResults },
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
-    { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：已自動帶入所選套組，之後都在這一頁操作', render: renderFloorplan },
+    { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；換套組會另存新方案，可新增方案複製格局', render: renderFloorplan },
+    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：我的家底下的所有方案（各自保存偏好、套組、擺放位置），可開啟、改名、刪除、複製格局新增方案', render: renderPlans },
   ];
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
 
@@ -92,6 +94,7 @@
   // The rail holds global destinations only; the planning flow itself is linear (see stepper).
   function renderRail(active) {
     $('rail').innerHTML = `<button class="rail-btn${active === 'home' ? ' active' : ''}" data-to="home" data-tip="首頁" aria-label="首頁">${I.home}</button>`
+      + `<button class="rail-btn${active === 'plans' ? ' active' : ''}" data-to="plans" data-tip="我的規劃" aria-label="我的規劃">${I.plans}</button>`
       + '<div class="rail-spacer"></div>'
       + `<button class="rail-btn" data-href="router_recommendation_wireframe%201.html" data-tip="後台：機種資料與權重（另開）" aria-label="後台">${I.admin}</button>`
       + `<button class="rail-btn" data-tip="客服支援（示意）" aria-label="客服支援">${I.help}</button>`;
@@ -102,7 +105,8 @@
   // ── 0_010 Home ──
   function renderHome(el) {
     const max = unlocked();
-    const resume = state.prefsDone ? FLOW[max] : null;
+    const recent = store.plans.slice(0, 3);
+    const resume = !recent.length && state.prefsDone ? FLOW[max] : null;
     el.innerHTML = `<div class="page">
       <section class="hero">
         <h1 class="hero-title">嗨，<br>來規劃你家的 WiFi</h1>
@@ -111,6 +115,7 @@
           <div>放進你家的平面圖 <span class="muted">· 模擬每個房間的訊號覆蓋</span></div>
         </div>
         <div class="hero-cta"><button class="btn btn-xl" id="start">開始規劃 <span class="btn-arrow">→</span></button><span class="muted">約 3 分鐘 · 免登入</span></div>
+        ${recent.length ? `<div class="recent"><div class="recent-head"><span class="eyebrow">最近的方案</span><button class="link-btn" data-to="plans">查看全部 ›</button></div><div class="recent-list">${recent.map(pl => `<button class="recent-item" data-open="${pl.id}"><span class="recent-thumb">${planThumb(pl)}</span><span class="recent-body"><span class="quick-title">${esc(pl.name)}</span><span class="quick-sub">${esc(pl.label)} · ${fmtTime(pl.updatedAt)}</span></span></button>`).join('')}</div></div>` : ''}
         ${resume ? `<div class="resume"><span class="quick-ico">${resume.key === 'plan' ? I.plan : I.rank}</span><div><div class="quick-title">繼續上次進度</div><div class="quick-sub">已完成偏好設定${state.bundleId ? '，並選了配置套組' : ''}</div></div><button class="btn btn-ghost btn-sm" id="resume">前往${resume.label}</button></div>` : ''}
       </section>
       <div class="home-strip"><div><div class="eyebrow">能幫你做什麼</div><h2 class="promo-heading">從挑機種到擺位置，一次搞定</h2></div></div>
@@ -118,6 +123,8 @@
     </div>`;
     $('start').onclick = () => go('needs');
     if (resume) $('resume').onclick = () => go(resume.to);
+    el.querySelectorAll('.recent [data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
+    el.querySelectorAll('.recent [data-to]').forEach(b => (b.onclick = () => go(b.dataset.to)));
     el.querySelectorAll('[data-promo]').forEach(b => (b.onclick = () => go('needs')));
   }
 
@@ -400,35 +407,204 @@
     } catch (e) { return false; }
   }
 
+  // ── 我的規劃：one home, several 方案 (each keeps its own prefs, bundle and floor plan) ──
+  // Stored in this browser only. Each plan holds a full copy of the floor plan project, so a
+  // new plan copies the layout of its source and the two can then be edited independently.
+  const PLANS_KEY = 'fpw_plans';
+  const PREF_KEYS = ['p', 'top', 's', 'styles', 'brands', 'tiers', 'brandOn', 'tierOn', 'includeTravel', 'area', 'areaUnit', 'floors', 'bh', 'country', 'sort'];
+  let store = { activeId: null, seq: 0, plans: [] };
+  try { Object.assign(store, JSON.parse(localStorage.getItem(PLANS_KEY)) || {}); } catch (e) { /* ignore */ }
+  function savePlans() {
+    try { localStorage.setItem(PLANS_KEY, JSON.stringify(store)); return true; }
+    catch (e) { toast('瀏覽器儲存空間不足，請到「我的規劃」刪除舊方案'); return false; }
+  }
+  const activePlan = () => store.plans.find(x => x.id === store.activeId) || null;
+  const prefsOf = () => Object.fromEntries(PREF_KEYS.map(k => [k, JSON.parse(JSON.stringify(state[k]))]));
+  const bundleLabel = b => `${b.r.id} × 1${b.N > 1 ? ` ＋ Node ${b.n.id} × ${b.N - 1}` : ''}`;
+  const fmtTime = ts => { const d = new Date(ts); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+
+  // Pull the app's latest edits (it autosaves to standalone_projects) back into the open plan.
+  function capturePlan() {
+    const plan = activePlan();
+    if (!plan || state.loadedPlanId !== plan.id) return;
+    try {
+      const proj = (JSON.parse(localStorage.getItem('standalone_projects')) || {}).demo;
+      if (proj && JSON.stringify(proj) !== JSON.stringify(plan.project)) { plan.project = proj; plan.updatedAt = Date.now(); savePlans(); }
+    } catch (e) { /* ignore */ }
+  }
+  function loadPlanIntoApp(plan) {
+    try {
+      AUTH_KEYS.forEach(k => localStorage.setItem(k, 'standalone'));
+      localStorage.setItem('standalone_projects', JSON.stringify({ demo: plan.project }));
+      localStorage.removeItem('aae_active_floor_demo');
+      state.loadedPlanId = plan.id; save();
+      return true;
+    } catch (e) { toast('瀏覽器儲存空間不足，無法開啟方案'); return false; }
+  }
+
+  // Put a bundle's devices onto an existing layout (keeps walls and floor plan images).
+  // Falls back to a freshly generated house when the floor count differs.
+  function placeOnLayout(b, u, layout) {
+    const fresh = buildProject(b, u).demo;
+    if (!layout || (layout.floors || []).length !== b.floorUnits.length) return { project: fresh, rebuilt: !!layout };
+    const project = JSON.parse(JSON.stringify(layout));
+    project.projectName = fresh.projectName;
+    project.floors.forEach((f, i) => {
+      const pts = (f.walls || []).flatMap(w => [w.start, w.end]);
+      const gen = fresh.floors[i].routers;
+      if (!pts.length) { f.routers = gen; return; }
+      const xs = pts.map(q => q.x), ys = pts.map(q => q.y), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      f.routers = gen.map((r, k) => ({ ...r, position: { x: Math.round(x0 + (x1 - x0) * (k + .5) / gen.length), y: Math.round(y0 + (y1 - y0) * (i % 2 ? .3 : .7)) } }));
+    });
+    return { project, rebuilt: false };
+  }
+
+  function createPlan(b, u, layout) {
+    const { project, rebuilt } = placeOnLayout(b, u, layout);
+    store.seq += 1;
+    const plan = { id: 'pl_' + Date.now(), name: '方案 ' + store.seq, createdAt: Date.now(), updatedAt: Date.now(), prefs: prefsOf(), bundleId: bundleKey(b), label: bundleLabel(b), units: b.N, project };
+    store.plans.unshift(plan); store.activeId = plan.id;
+    savePlans();
+    return { plan, rebuilt };
+  }
+
+  // Open a saved plan: restore its prefs and bundle, load its floor plan.
+  function openPlan(id) {
+    capturePlan();
+    const plan = store.plans.find(x => x.id === id);
+    if (!plan) return;
+    Object.assign(state, JSON.parse(JSON.stringify(plan.prefs)));
+    state.bundleId = plan.bundleId; state.prefsDone = true; state.newPlanFrom = null; state.seededKey = null;
+    store.activeId = plan.id; savePlans();
+    loadPlanIntoApp(plan);
+    go('floorplan');
+  }
+
+  // Start a new plan that copies the layout of `fromId`; prefs are pre-filled for editing.
+  function startNewPlan(fromId) {
+    capturePlan();
+    const src = store.plans.find(x => x.id === fromId);
+    if (src) Object.assign(state, JSON.parse(JSON.stringify(src.prefs)));
+    state.newPlanFrom = src ? src.id : null; state.bundleId = null; state.prefsDone = true; save();
+    go('needs');
+  }
+
+  // Small SVG preview of a plan's first floor (walls + devices).
+  function planThumb(plan) {
+    const f = plan.project && plan.project.floors && plan.project.floors[0];
+    const walls = (f && f.walls) || [], routers = (f && f.routers) || [];
+    const pts = walls.flatMap(w => [w.start, w.end]).concat(routers.map(r => r.position));
+    if (!pts.length) return `<img src="${productImg((plan.bundleId || '').split('|')[0])}" alt="">`;
+    const xs = pts.map(q => q.x), ys = pts.map(q => q.y), x0 = Math.min(...xs), y0 = Math.min(...ys);
+    const w = Math.max(1, Math.max(...xs) - x0), h = Math.max(1, Math.max(...ys) - y0), pad = Math.max(w, h) * .08, sw = Math.max(w, h) / 70;
+    return `<svg viewBox="${x0 - pad} ${y0 - pad} ${w + pad * 2} ${h + pad * 2}" preserveAspectRatio="xMidYMid meet">`
+      + walls.map(l => `<line x1="${l.start.x}" y1="${l.start.y}" x2="${l.end.x}" y2="${l.end.y}" stroke="#7c8794" stroke-width="${sw}" stroke-linecap="round"/>`).join('')
+      + routers.map(r => `<circle cx="${r.position.x}" cy="${r.position.y}" r="${sw * 3.2}" fill="#1982ff" fill-opacity=".18"/><circle cx="${r.position.x}" cy="${r.position.y}" r="${sw * 1.4}" fill="#1982ff"/>`).join('')
+      + '</svg>';
+  }
+
+  // ── 4_010 我的規劃 ──
+  function renderPlans(el) {
+    capturePlan();
+    const list = store.plans;
+    el.innerHTML = `<div class="page">
+      <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
+        <p class="page-sub">${list.length ? `${list.length} 個方案 · 每個方案各自保存偏好、套組與擺放位置` : '還沒有方案。完成推薦並進入居家配置後，會自動存成方案。'}</p></div></div>
+      ${list.length ? `<div class="plan-grid">${list.map(pl => `<div class="plan-card${pl.id === store.activeId ? ' current' : ''}" data-id="${pl.id}">
+          <div class="plan-thumb">${planThumb(pl)}${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
+          <div class="plan-body">
+            <div class="plan-name-row"><span class="plan-name">${esc(pl.name)}</span><button class="plan-icon" data-rename="${pl.id}" title="改名" aria-label="改名">✎</button></div>
+            <div class="plan-meta">${esc(pl.label)}</div>
+            <div class="plan-meta muted">共 ${pl.units} 台 · ${pl.prefs.areaUnit === 'ping' ? (pl.prefs.area / PING).toFixed(0) + ' 坪' : Math.round(pl.prefs.area) + ' m²'} · ${pl.prefs.floors} 層 · ${fmtTime(pl.updatedAt)}</div>
+            <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button><button class="try-link" data-copy="${pl.id}">複製格局新增方案</button><button class="plan-icon plan-del" data-del="${pl.id}" title="刪除" aria-label="刪除">🗑</button></div>
+          </div></div>`).join('')}
+        <button class="plan-card plan-new" id="newPlan"><span class="plan-new-plus">＋</span><span class="quick-title">新增方案</span><span class="quick-sub">複製目前方案的格局，換偏好或套組比較效果</span></button>
+      </div>` : `<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`}
+    </div>`;
+    el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
+    el.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => startNewPlan(b.dataset.copy)));
+    el.querySelectorAll('[data-del]').forEach(b => (b.onclick = () => {
+      const pl = store.plans.find(x => x.id === b.dataset.del);
+      if (!pl || !confirm(`刪除「${pl.name}」？刪除後無法復原。`)) return;
+      store.plans = store.plans.filter(x => x.id !== pl.id);
+      if (store.activeId === pl.id) { store.activeId = store.plans[0] ? store.plans[0].id : null; state.loadedPlanId = null; save(); }
+      savePlans(); render();
+    }));
+    el.querySelectorAll('[data-rename]').forEach(b => (b.onclick = () => {
+      const pl = store.plans.find(x => x.id === b.dataset.rename);
+      const span = b.parentElement.querySelector('.plan-name');
+      const input = document.createElement('input');
+      input.className = 'plan-name-input'; input.value = pl.name; input.maxLength = 30;
+      span.replaceWith(input); b.hidden = true; input.focus(); input.select();
+      const done = ok => { if (ok && input.value.trim()) { pl.name = input.value.trim(); savePlans(); } render(); };
+      input.onkeydown = e => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); };
+      input.onblur = () => done(true);
+    }));
+    const np = $('newPlan');
+    if (np) np.onclick = () => startNewPlan(store.activeId || (store.plans[0] && store.plans[0].id));
+    const sf = $('startFirst');
+    if (sf) sf.onclick = () => go('needs');
+  }
+
   function renderFloorplan(el) {
     const { u, bundles } = results();
     const blank = state.seededKey === 'blank' && !state.bundleId;
-    const b = blank ? null : currentBundle(bundles);
     try { AUTH_KEYS.forEach(k => localStorage.setItem(k, 'standalone')); } catch (e) { /* ignore */ }
-    let fresh = false;
-    if (b) {
-      const key = bundleKey(b) + '|' + u.area + '|' + u.floors;
-      if (state.seededKey !== key) { fresh = seedFloorplan(b, u); state.seededKey = key; state.bundleId = bundleKey(b); save(); }
+    let plan = null, fresh = false, note = '';
+    const b = bundles.find(x => bundleKey(x) === state.bundleId) || null;
+    if (!blank) {
+      capturePlan();
+      const cur = activePlan();
+      const samePrefs = cur && JSON.stringify(cur.prefs) === JSON.stringify(prefsOf());
+      if (state.newPlanFrom && b) {
+        // Explicit 新增方案: copy the source plan's layout.
+        const src = store.plans.find(x => x.id === state.newPlanFrom);
+        const r = createPlan(b, u, src && src.project);
+        plan = r.plan; state.newPlanFrom = null; save();
+        note = r.rebuilt ? `已建立${plan.name}；樓層數不同，已重新產生示意格局` : `已建立${plan.name}，沿用「${src ? src.name : '原方案'}」的格局`;
+        fresh = loadPlanIntoApp(plan);
+      } else if (cur && cur.bundleId === state.bundleId && samePrefs) {
+        plan = cur;
+        if (state.loadedPlanId !== cur.id) fresh = loadPlanIntoApp(cur);
+      } else if (b) {
+        // Different bundle or prefs: keep the current plan, save this one as a new plan on the same layout.
+        const r = createPlan(b, u, cur && cur.project);
+        plan = r.plan;
+        if (cur) note = r.rebuilt ? `已另存為${plan.name}；樓層數不同，已重新產生示意格局` : `已另存為${plan.name}，「${cur.name}」保留在我的規劃`;
+        fresh = loadPlanIntoApp(plan);
+      } else if (cur) {
+        plan = cur;
+        if (state.loadedPlanId !== cur.id) fresh = loadPlanIntoApp(cur);
+      }
     }
-    const mapped = b ? [b.r.id, b.n.id].filter((id, i, a) => a.indexOf(id) === i && FP_MODEL[id] && FP_MODEL[id] !== id) : [];
+    const ids = plan ? plan.bundleId.split('|') : [];
+    const mapped = ids.slice(0, 2).filter((id, i, a) => id && a.indexOf(id) === i && FP_MODEL[id] && FP_MODEL[id] !== id);
     // Devices sit on different floors; the app only shows one floor at a time, so offer a floor switcher.
-    const floorList = b && b.floorUnits.length > 1 ? buildProject(b, u).demo.floors.map(f => ({ id: f.id, name: f.name, devices: f.routers.map(r => r.displayName.replace(' · ', ' ')) })) : [];
+    const floorList = plan && plan.project.floors.length > 1 ? plan.project.floors.map(f => ({ id: f.id, name: f.name, devices: (f.routers || []).map(r => (r.displayName || r.name).replace(' · ', ' ')) })) : [];
     el.innerHTML = `<div class="page-full">
       <div class="fp-bar">
         <span class="quick-ico" style="width:38px;height:38px">${I.plan}</span>
-        <div><div class="fp-bar-title">${b ? `${esc(b.r.id)} × 1${b.N > 1 ? ` ＋ Node ${esc(b.n.id)} × ${b.N - 1}` : ''}` : '自由試用'}</div>
-          <div class="fp-bar-meta">${b ? `共 ${b.N} 台 · ${areaText(u.area)} · ${u.floors} 層 · 已自動放進示意平面圖，可拖曳調整或上傳自家平面圖` : '未帶入推薦套組；可上傳平面圖並自行放置路由器'}</div>
+        <div><div class="fp-bar-title">${plan ? `<span class="fp-plan-name">${esc(plan.name)}</span>${esc(plan.label)}` : '自由試用'}</div>
+          <div class="fp-bar-meta">${plan ? `共 ${plan.units} 台 · ${areaText(u.area)} · ${u.floors} 層 · 自動儲存，可拖曳調整或上傳自家平面圖` : '未帶入推薦套組；可上傳平面圖並自行放置路由器'}</div>
           ${floorList.length ? `<div class="fp-floors">${floorList.map((f, i) => `<button class="fp-floor${i === 0 ? ' on' : ''}" data-floor="${f.id}"><b>${f.name}</b>${esc(f.devices.join('、'))}</button>`).join('')}</div>` : ''}</div>
         ${mapped.length ? `<span class="fp-warn" title="Floor plan 機種庫沒有同名型號，暫以近似機種模擬">${mapped.map(id => esc(id) + '→' + esc(FP_MODEL[id])).join('、')}</span>` : ''}
         <span class="spacer"></span>
-        ${b ? '<button class="btn btn-ghost btn-sm" id="reseed" title="捨棄目前的調整，重新放入推薦套組">重新帶入</button>' : ''}
-        <button class="btn btn-sm" id="swap">${b ? '換一組配置' : '先看推薦'}</button>
+        ${plan && b ? '<button class="btn btn-ghost btn-sm" id="reseed" title="保留格局，重新放入這組機器">重新帶入</button>' : ''}
+        ${plan ? '<button class="btn btn-ghost btn-sm" id="newPlan" title="複製目前格局，換偏好或套組比較">新增方案</button>' : ''}
+        <button class="btn btn-sm" id="swap">${plan ? '換一組配置' : '先看推薦'}</button>
       </div>
       <iframe class="fp-frame" id="fpFrame" title="ASUS WiFi Floorplan" src="${FP_SRC}${fresh ? '?t=' + Date.now() : ''}"></iframe>
     </div>`;
     $('swap').onclick = () => go('results');
-    const re = $('reseed');
-    if (re) re.onclick = () => { seedFloorplan(b, u); $('fpFrame').src = FP_SRC + '?t=' + Date.now(); toast('已重新帶入推薦套組'); };
+    if ($('newPlan')) $('newPlan').onclick = () => startNewPlan(plan.id);
+    if ($('reseed')) $('reseed').onclick = () => {
+      capturePlan();
+      plan.project = placeOnLayout(b, u, plan.project).project; plan.updatedAt = Date.now(); savePlans();
+      loadPlanIntoApp(plan); $('fpFrame').src = FP_SRC + '?t=' + Date.now(); toast('已在目前格局重新放入這組機器');
+    };
+    // Keep the plan in sync with the app's autosave while this page is open.
+    clearInterval(captureTimer);
+    if (plan) captureTimer = setInterval(() => { if (!document.body.contains($('fpFrame'))) return clearInterval(captureTimer); capturePlan(); }, 3000);
     if (floorList.length) {
       const frameDoc = () => { try { return $('fpFrame').contentDocument; } catch (e) { return null; } };
       el.querySelectorAll('[data-floor]').forEach(btn => (btn.onclick = () => {
@@ -443,10 +619,11 @@
       };
       clearInterval(floorSyncTimer);
       floorSyncTimer = setInterval(() => { if (!document.body.contains(el.querySelector('.fp-floors'))) return clearInterval(floorSyncTimer); syncFloor(); }, 700);
-      setTimeout(() => toast(`這組分在 ${floorList.length} 個樓層，點上方樓層切換查看`), 1200);
     }
+    const msg = [note, floorList.length ? `這組分在 ${floorList.length} 個樓層，點上方樓層切換查看` : ''].filter(Boolean);
+    msg.forEach((m, i) => setTimeout(() => toast(m), 900 + i * 2200));
   }
-  let floorSyncTimer;
+  let floorSyncTimer, captureTimer;
 
   // ── Toast ──
   let toastTimer;
@@ -469,6 +646,7 @@
   document.addEventListener('click', e => { if (!e.target.closest('.demo-bar-pagenum-wrap')) $('demo-bar-pagelist').classList.remove('show'); });
   $('demo-bar-reset').onclick = () => {
     state = initial(); save(); clearFloorplanProject();
+    store = { activeId: null, seq: 0, plans: [] }; savePlans();
     decisions = []; renderDecisionBar(); closeDecision();
     if (currentId() === 'home') render(); else go('home');
   };
@@ -525,7 +703,11 @@
       const cls = i === cur ? 'current' : i <= max ? 'done' : 'locked';
       return (i ? `<span class="fs-line${finished(i - 1) ? ' done' : ''}"></span>` : '')
         + `<button class="fs-step ${cls}" data-to="${f.to}" ${cls === 'locked' ? 'disabled' : ''} title="${cls === 'locked' ? '請先完成前一步' : f.label}"><span class="fs-dot">${i !== cur && finished(i) ? '✓' : i + 1}</span><span class="fs-label">${f.label}</span></button>`;
-    }).join('') + `<span class="fs-hint">${hints[cur]}</span>`;
+    }).join('') + (state.newPlanFrom && cur < 2
+      ? `<span class="fs-hint fs-newplan">新增方案中：沿用「${esc((store.plans.find(x => x.id === state.newPlanFrom) || {}).name || '')}」的格局 <button class="link-btn" id="cancelNew">取消</button></span>`
+      : `<span class="fs-hint">${hints[cur]}</span>`);
+    const cancel = nav.querySelector('#cancelNew');
+    if (cancel) cancel.onclick = () => { const id = state.newPlanFrom; state.newPlanFrom = null; save(); openPlan(id); };
     nav.querySelectorAll('.fs-step:not([disabled])').forEach(b => (b.onclick = () => { if (b.dataset.to !== location.hash.slice(1)) go(b.dataset.to); }));
   }
 
@@ -539,8 +721,11 @@
 
   // ── Router ──
   function currentId() { const id = location.hash.slice(1); return screenById[id] ? id : SCREENS[0].id; }
+  let prevScreen = null;
   function render() {
     let s = screenById[currentId()];
+    if (prevScreen === 'floorplan' && s.id !== 'floorplan') capturePlan();
+    prevScreen = s.id;
     const need = stepOf(s), max = unlocked();
     if (need > max) {
       toast(max === 0 ? '請先完成偏好設定' : '請先在推薦結果選一組套組');
@@ -563,5 +748,6 @@
     render();
   }
   window.addEventListener('hashchange', route);
+  window.addEventListener('beforeunload', () => capturePlan());
   route();
 })();
