@@ -542,7 +542,8 @@
     const plansOnly = store.plans.filter(isPlan);
     const groups = recs.map(rc => ({ key: rc.id, rec: rc, plans: triedPlans(rc.prefs).sort((x, y) => y.updatedAt - x.updatedAt) }));
     const orphans = plansOnly.filter(p => !recOf(p)).sort((x, y) => y.updatedAt - x.updatedAt);
-    if (orphans.length) groups.push({ key: 'other', rec: null, plans: orphans });
+    // 其他方案 is always listed as its own category (empty until a record with plans is deleted).
+    if (groups.length || orphans.length) groups.push({ key: 'other', rec: null, plans: orphans });
     // Open groups: remembered per viewer; by default the group holding the open plan (or the first).
     if (Array.isArray(state.openGroups) && state.openGroups.length > 1) state.openGroups = state.openGroups.slice(-1);
     if (!Array.isArray(state.openGroups)) {
@@ -579,12 +580,12 @@
          <button class="btn btn-ghost btn-sm" data-rec="${g.rec.id}">查看推薦</button>${delBtn(g.rec)}`
       : `<div class="grp-icon grp-icon-other">${I.plans}</div>
          <div class="grp-main"><div class="plan-name-row"><span class="plan-name">其他方案</span></div><div class="plan-meta muted">推薦紀錄已刪除的方案</div></div>
-         <span class="grp-count">${g.plans.length} 個方案</span>`;
+         <span class="grp-count">${g.plans.length ? `${g.plans.length} 個方案` : '沒有方案'}</span>`;
     const groupBlock = g => {
       const open = state.openGroups.includes(g.key);
       return `<section class="grp${open ? ' open' : ''}${g.rec ? '' : ' grp-other'}">
         <div class="grp-head" data-toggle="${g.key}"><span class="grp-chev">›</span>${groupHead(g)}</div>
-        ${open ? `<div class="grp-body">${g.plans.length ? `<div class="plan-grid">${g.plans.map(planCard).join('')}</div>` : '<p class="muted small grp-empty">還沒有從這筆推薦試擺的方案。按「查看推薦」，在推薦結果選一組「在我家試擺」。</p>'}</div>` : ''}
+        ${open ? `<div class="grp-body">${g.plans.length ? `<div class="plan-grid">${g.plans.map(planCard).join('')}</div>` : !g.rec ? '<p class="muted small grp-empty">目前沒有其他方案。刪除推薦紀錄時，底下的方案會移到這裡。</p>' : '<p class="muted small grp-empty">還沒有從這筆推薦試擺的方案。按「查看推薦」，在推薦結果選一組「在我家試擺」。</p>'}</div>` : ''}
       </section>`;
     };
     const counts = [recs.length ? `${recs.length} 筆推薦紀錄` : '', plansOnly.length ? `${plansOnly.length} 個方案` : ''].filter(Boolean).join(' · ');
