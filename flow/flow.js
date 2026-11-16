@@ -52,6 +52,9 @@
   // Recommendation model id → floor plan app catalog model name
   const FP_MODEL = { 'BT8': 'BT8', 'GT-BE98': 'GT-BE98', 'GT-BE19000AI': 'GT-BE19000AI', 'TUF-AX6000': 'TUF-BE6500', 'RT-AX86U Pro': 'RT-AX86U_Pro', 'PRT-BE5000': 'PRT-BE59', 'RT-BE58 Go': 'RT-BE58_Go', 'RT-AX57 Go': 'PRT-AX57_Go', 'BD4 Outdoor': 'BD4_OD', 'BD5 Outdoor': 'BD4_OD' };
   const fpModel = id => FP_MODEL[id] || 'BT8';
+  // Product icons: same ASUS CDN the floor plan app already uses.
+  const PRODUCT_IMG = { 'BT8': 'ZenWiFi_BT8', 'GT-BE98': 'GT-BE98', 'GT-BE19000AI': 'GT-BE19000AI', 'TUF-AX6000': 'TUF-AX6000', 'RT-AX86U Pro': 'RT-AX86U_Pro', 'PRT-BE5000': 'PRT-BE5000', 'RT-BE58 Go': 'RT-BE58_Go', 'RT-AX57 Go': 'RT-AX57_Go', 'BD4 Outdoor': 'ZenWiFi_BD4_Outdoor', 'BD5 Outdoor': 'ZenWiFi_BD5_Outdoor' };
+  const productImg = id => 'https://nw-dlcdnet.asus.com/plugin/productIcons/' + (PRODUCT_IMG[id] || id.replace(/ /g, '_')) + '.png';
 
   // ── Screens ──
   const SCREENS = [
@@ -265,12 +268,12 @@
     const top4 = models.slice(0, 4), rest = models.slice(4);
     const tags = [u.p.map(i => E.primaryNames[i] + (i === u.top && u.p.length > 1 ? '★' : '')).join('、'), ...u.s.map(i => E.secondaryNames[i]), areaText(u.area), `${u.floors} 層`, u.bh === 'wired' ? '有線回程' : '無線回程', state.brands.length ? '品牌：' + state.brands.join('／') : null, state.tiers.length ? '定位：' + state.tiers.map(t => E.tierNames[t]).join('／') : null].filter(Boolean);
     el.innerHTML = `<div class="page">
-      <div class="res-head"><div><div class="eyebrow">推薦結果</div><h1 class="page-title" style="margin-top:6px">這些機種最適合你家</h1><div class="summary-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}</div></div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="seg" id="sort"><button data-v="balanced" class="${state.sort !== 'cost' ? 'on' : ''}">平衡推薦</button><button data-v="cost" class="${state.sort === 'cost' ? 'on' : ''}">較低花費優先</button></div><button class="btn btn-ghost btn-sm" id="edit">修改條件</button></div></div>
+      <div class="res-head"><div><div class="eyebrow">推薦結果</div><div class="title-row"><h1 class="page-title">這些機種最適合你家</h1><button class="btn btn-ghost btn-sm" id="edit">修改條件</button></div><div class="summary-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}</div></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="seg" id="sort"><button data-v="balanced" class="${state.sort !== 'cost' ? 'on' : ''}">平衡推薦</button><button data-v="cost" class="${state.sort === 'cost' ? 'on' : ''}">較低花費優先</button></div></div></div>
       ${u.country !== 'TW' ? '<div class="card empty" style="margin-top:24px">此地區尚未建立價表與可推薦機種，請改選台灣。</div>' : `
-      <div class="section-head"><div><h2>推薦機種排行</h2><div class="muted small">每型號一筆 · 已納入你的面積與樓層 · 點卡片看詳情</div></div><div class="steps">${top4.map((m, i) => `<span class="${i === 0 ? 'on' : ''}">${esc(m.id)}</span>`).join('')}</div></div>
+      <div class="section-head"><div><h2>推薦機種排行</h2><div class="muted small">每型號一筆 · 已納入你的面積與樓層 · 點卡片看詳情</div></div></div>
       ${top4.length ? `<div class="gauges">${top4.map((m, i) => `<div class="gauge-card" data-model="${esc(m.id)}">
-        <div class="gauge-top"><div><div class="gauge-name">${esc(m.id)}</div><div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div></div><span class="rank-badge">#${i + 1}</span></div>
+        <div class="gauge-top"><img class="gauge-img" src="${productImg(m.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><div class="gauge-title"><div class="gauge-name">${esc(m.id)}</div><div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div></div><span class="rank-badge">#${i + 1}</span></div>
         <div class="gauge-body"><div class="ring">${ring(m.Z, ringColors[i])}<div class="ring-val"><b>${m.Z.toFixed(0)}</b><span>綜合分</span></div></div>
         <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>最少 ${m.N} 台</li><li>${m.m.ai ? '搭載 AI 核心' : '一般核心'}</li></ul></div>
         <div>${m.active ? '<span class="badge promo">本期主打</span>' : ''}${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div></div>`).join('')}</div>

@@ -375,6 +375,9 @@ svg { display: block; }
 .gauge-card { background: var(--card); padding: 22px; cursor: pointer; transition: background .15s; display: flex; flex-direction: column; }
 .gauge-card:hover { background: #fbfcfd; }
 .gauge-top { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+.gauge-top .gauge-title { flex: 1; min-width: 0; }
+.gauge-img { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; border-radius: 12px; background: var(--panel); padding: 4px; }
+.title-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
 .gauge-name { font-size: 19px; }
 .gauge-sub { color: var(--ink-3); font-size: 13px; }
 .rank-badge { font-size: 13px; color: var(--ink-3); }
