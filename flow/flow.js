@@ -564,9 +564,9 @@
     const delBtn = x => `<button class="plan-icon plan-del" data-del="${x.id}" title="刪除" aria-label="刪除"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7,21q-0.82,0-1.41-0.59T5,19V6H4V4H9V3h6V4h5V6H19V19q0,0.82-0.59,1.41T17,21H7ZM17,6H7V19H17V6ZM9,17h2V8H9v9Zm4,0h2V8H13v9ZM7,6V19V6Z"/></svg></button>`;
     const created = x => `<span class="plan-time" title="建立時間">${fmtTime(x.createdAt)}</span>`;
     const planCard = pl => `<div class="plan-card${pl.id === store.activeId ? ' current' : ''}">
-        <div class="plan-thumb">${planThumb(pl)}${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
+        <div class="plan-thumb">${planThumb(pl)}${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}${created(pl)}</div>
         <div class="plan-body">
-          <div class="plan-name-row"><span class="plan-name">${esc(pl.name)}</span>${renameBtn(pl)}${created(pl)}</div>
+          <div class="plan-name-row"><span class="plan-name">${esc(pl.name)}</span>${renameBtn(pl)}</div>
           <div class="plan-meta">${esc(pl.label)}</div>
           <div class="plan-meta muted">共 ${pl.units} 台 · ${areaOf(pl.prefs)} · ${pl.prefs.floors} 層</div>
           <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button>${delBtn(pl)}</div>
@@ -574,11 +574,11 @@
     const groupHead = g => g.rec
       ? `<div class="grp-icon">${g.rec.top && g.rec.top[0] ? `<img src="${productImg(g.rec.top[0])}" alt="" onerror="this.style.visibility='hidden'">` : ''}</div>
          <div class="grp-main">
-           <div class="plan-name-row"><span class="tag tag-kind-rec">推薦紀錄</span><span class="plan-name">${esc(g.rec.name)}</span>${renameBtn(g.rec)}${created(g.rec)}</div>
+           <div class="plan-name-row"><span class="tag tag-kind-rec">推薦紀錄</span><span class="plan-name">${esc(g.rec.name)}</span>${renameBtn(g.rec)}</div>
            <div class="plan-meta">${esc((g.rec.top || [])[0] || '')}　<span class="muted">${esc(g.rec.prefs.p.map(i => E.primaryNames[i]).join('、'))} · ${areaOf(g.rec.prefs)} · ${g.rec.prefs.floors} 層</span></div>
          </div>
          <span class="grp-count">${g.plans.length ? `${g.plans.length} 個方案` : '尚未試擺'}</span>
-         <button class="btn btn-ghost btn-sm" data-rec="${g.rec.id}">查看推薦</button>${delBtn(g.rec)}`
+         <button class="btn btn-ghost btn-sm" data-rec="${g.rec.id}">查看推薦</button>${delBtn(g.rec)}${created(g.rec)}`
       : `<div class="grp-icon grp-icon-other">${I.plans}</div>
          <div class="grp-main"><div class="plan-name-row"><span class="plan-name">其他方案</span></div></div>
          <span class="grp-count">${g.plans.length ? `${g.plans.length} 個方案` : '沒有方案'}</span>`;
@@ -593,7 +593,7 @@
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
         <p class="page-sub">${groups.length ? counts + '；點推薦紀錄展開從它試擺的方案' : '還沒有紀錄。看完推薦結果或進入居家配置後，會自動存在這裡。'}</p></div>
-        ${plansOnly.length ? '<button class="btn btn-ghost btn-sm" id="newPlan">＋ 新增方案</button>' : ''}</div>
+        ${plansOnly.length ? '<button class="btn btn-sm btn-outline" id="newPlan">＋ 新增方案</button>' : ''}</div>
       ${pendingCard}
       ${groups.length ? `<div class="grp-list">${groups.map(groupBlock).join('')}</div>` : (pending ? '' : `<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
     </div>`;
