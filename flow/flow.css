@@ -478,6 +478,9 @@ svg { display: block; }
 .fp-floor.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-2); }
 .fp-floor.on b { background: var(--accent); color: #fff; }
 .fp-frame { flex: 1; min-height: 0; border: 0; width: 100%; background: #fff; }
+.fp-sim { color: var(--ink-3); }
+.fp-reset { font-size: 13px; color: var(--ink-2); }
+.fp-reset:hover { color: var(--accent-2); }
 .fp-warn { font-size: 12px; color: #b4650f; background: #fff1de; border-radius: 8px; padding: 4px 10px; }
 
 /* Toast */

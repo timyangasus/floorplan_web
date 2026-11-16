@@ -72,7 +72,7 @@
     { id: 'results', code: '2_010', rail: 'rank', description: '推薦結果：機種排行＋配置套組 Top 10，看到即完成；可在我家試擺（約 70%）或購物車前往購買（約 30%）', render: renderResults },
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
-    { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；換套組會另存新方案，可新增方案複製格局', render: renderFloorplan },
+    { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；「試其他套組」回推薦結果另選，「重置擺放」讓機器回預設位置', render: renderFloorplan },
     { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：依推薦紀錄分組，展開看到從它試擺的方案；推薦紀錄刪除後方案移到「其他方案」', render: renderPlans },
   ];
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -591,7 +591,7 @@
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
         <p class="page-sub">${groups.length ? counts + '；點推薦紀錄展開從它試擺的方案' : '還沒有紀錄。看完推薦結果或進入居家配置後，會自動存在這裡。'}</p></div>
-        ${plansOnly.length ? '<button class="btn btn-sm btn-outline" id="newPlan">＋ 新增方案</button>' : ''}</div>
+</div>
       ${groups.length ? `<div class="grp-list">${groups.map(groupBlock).join('')}</div>` : (`<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
     </div>`;
     el.querySelectorAll('[data-toggle]').forEach(h => (h.onclick = e => {
@@ -626,8 +626,6 @@
       input.onkeydown = e => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); };
       input.onblur = () => done(true);
     }));
-    const np = $('newPlan');
-    if (np) np.onclick = () => startNewPlan((activePlan() || plansOnly[0]).id);
     const sf = $('startFirst');
     if (sf) sf.onclick = () => go('needs');
   }
@@ -678,22 +676,20 @@
       <div class="fp-bar">
         <span class="quick-ico" style="width:38px;height:38px">${I.plan}</span>
         <div><div class="fp-bar-title">${plan ? `<span class="fp-plan-name">${esc(plan.name)}</span>${esc(plan.label)}` : '自由試用'}</div>
-          <div class="fp-bar-meta">${plan ? `共 ${plan.units} 台 · ${areaText(u.area)} · ${u.floors} 層 · 自動儲存，可拖曳調整或上傳自家平面圖` : '未帶入推薦套組；可上傳平面圖並自行放置路由器'}</div>
+          <div class="fp-bar-meta">${plan ? `共 ${plan.units} 台 · ${areaText(u.area)} · ${u.floors} 層 · 自動儲存，可拖曳調整或上傳自家平面圖${mapped.length ? `<span class="fp-sim">　以 ${mapped.map(id => esc(FP_MODEL[id])).join('、')} 模擬</span>` : ''}` : '未帶入推薦套組；可上傳平面圖並自行放置路由器'}</div>
           ${floorList.length ? `<div class="fp-floors">${floorList.map((f, i) => `<button class="fp-floor${i === 0 ? ' on' : ''}" data-floor="${f.id}"><b>${f.name}</b>${esc(f.devices.join('、'))}</button>`).join('')}</div>` : ''}</div>
-        ${mapped.length ? `<span class="fp-warn" title="Floor plan 機種庫沒有同名型號，暫以近似機種模擬">${mapped.map(id => esc(id) + '→' + esc(FP_MODEL[id])).join('、')}</span>` : ''}
         <span class="spacer"></span>
-        ${plan && b ? '<button class="btn btn-ghost btn-sm" id="reseed" title="保留格局，重新放入這組機器">重新帶入</button>' : ''}
-        ${plan ? '<button class="btn btn-ghost btn-sm" id="newPlan" title="複製目前格局，試試不同的偏好或套組">新增方案</button>' : ''}
-        <button class="btn btn-sm" id="swap">${plan ? '換一組配置' : '先看推薦'}</button>
+        ${plan && b ? '<button class="link-btn fp-reset" id="reseed">重置擺放</button>' : ''}
+        <button class="btn btn-sm" id="swap">${plan ? '試其他套組' : '先看推薦'}</button>
       </div>
       <iframe class="fp-frame" id="fpFrame" title="ASUS WiFi Floorplan" src="${FP_SRC}${fresh ? '?t=' + Date.now() : ''}"></iframe>
     </div>`;
     $('swap').onclick = () => go('results');
-    if ($('newPlan')) $('newPlan').onclick = () => startNewPlan(plan.id);
-    if ($('reseed')) $('reseed').onclick = () => {
+    if ($('reseed')) $('reseed').onclick = async () => {
+      if (!await askConfirm('重置擺放？', '機器會回到預設位置，你調整過的位置會被取代；牆和平面圖會保留。', '重置')) return;
       capturePlan();
       plan.project = placeOnLayout(b, u, plan.project).project; plan.updatedAt = Date.now(); savePlans();
-      loadPlanIntoApp(plan); $('fpFrame').src = FP_SRC + '?t=' + Date.now(); toast('已在目前格局重新放入這組機器');
+      loadPlanIntoApp(plan); $('fpFrame').src = FP_SRC + '?t=' + Date.now(); toast('已重置擺放');
     };
     // Keep the plan in sync with the app's autosave while this page is open.
     clearInterval(captureTimer);
