@@ -595,7 +595,12 @@ svg { display: block; }
 .gauges-3 { grid-template-columns: repeat(3, 1fr); }
 .gauge-config { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--panel); font-size: 13px; line-height: 1.5; }
 .gauge-config-label { display: block; font-size: 11px; color: var(--ink-3); letter-spacing: .5px; margin-bottom: 2px; }
-.more-toggle { display: inline-block; margin: 14px 24px 0 0; font-size: 14px; }
+.more-row { margin-top: 12px; }
+.more-toggle { font-size: 14px; }
+.fold-head { cursor: pointer; align-items: center; padding: 16px 20px; margin: 34px 0 0; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); }
+.fold-head:hover .fold-toggle { color: var(--accent-2); }
+.fold-head.open { margin-bottom: 12px; }
+.fold-toggle { font-size: 14px; color: var(--accent); white-space: nowrap; }
 .more-models { margin-top: 10px; }
 @media (max-width: 1100px) { .gauges-3 { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 860px) { .gauges-3 { grid-template-columns: 1fr; } }

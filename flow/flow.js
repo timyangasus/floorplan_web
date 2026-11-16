@@ -280,12 +280,11 @@
         <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>${m.m.ai ? 'AI 核心' : '一般核心'}</li></ul></div>
         ${bestFor(m.id) ? `<div class="gauge-config"><span class="gauge-config-label">建議配置</span><div>${cfgText(bestFor(m.id))}</div></div>` : ''}
         <div class="gauge-foot"><div class="gauge-actions">${bestFor(m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">${tryLabel(bestFor(m.id))}</button>` : ''}${cartBtn(`data-buy-model="${esc(m.id)}"`)}</div><div class="gauge-badges">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div></div></div>`).join('')}</div>
-        ${rest.length ? `<button class="link-btn more-toggle" id="moreModels">${showMoreModels ? '收起更多機種' : `查看更多機種（${rest.length}）`} ›</button>
+        ${rest.length ? `<div class="more-row"><button class="link-btn more-toggle" id="moreModels">${showMoreModels ? '收起更多機種 ▴' : `查看更多機種（${rest.length}）▾`}</button></div>
         ${showMoreModels ? `<div class="more-models">${rest.map((m, i) => `<button data-model="${esc(m.id)}">${rankTag(i + 4)}<span>${esc(m.id)}</span></button>`).join('')}</div>` : ''}` : ''}` : '<div class="card empty">沒有符合目前品牌／定位與空間條件的機種，請調整條件。</div>'}
 
-      ${bundles.length ? `<button class="link-btn more-toggle" id="moreBundles">${showBundles ? '收起其他配置組合' : `查看其他配置組合（${bundles.length}）`} ›</button>` : ''}
-      ${showBundles ? `<div class="section-head"><div><h2>其他配置組合 · Top ${bundles.length}</h2><div class="muted small">主機＋Node 的不同搭配與最少台數</div></div></div>
-      ${bundles.length ? `<div class="bundles">${bundles.map((b, i) => `<div class="bundle">
+      ${bundles.length ? `<div class="section-head fold-head${showBundles ? ' open' : ''}" id="moreBundles" role="button" aria-expanded="${showBundles}"><div><h2>推薦配置套組 · 前十名</h2><div class="muted small">主機＋Node 的不同搭配與最少台數；Node 依空間與需求搭配</div></div><span class="fold-toggle">${showBundles ? '收起 ▴' : '展開 ▾'}</span></div>` : ''}
+      ${showBundles ? `${bundles.length ? `<div class="bundles">${bundles.map((b, i) => `<div class="bundle">
         <div class="bundle-rank">${String(i + 1).padStart(2, '0')}</div>
         <div><div class="bundle-name">${esc(b.r.id)}${b.N > 1 ? ` <span class="muted">＋ ${esc(b.n.id)}</span>` : ''}${i === 0 ? ' <span class="tag tag-rank1" title="最推薦">★</span>' : ''}</div>
           <div class="bundle-meta"><span>${b.N === 1 ? '單機' : 'AiMesh'}</span><span>WiFi ${b.r.wifi}</span><span>各樓層 ${b.floorUnits.join(' / ')} 台</span><span>${esc(E.tierNames[b.r.positioning] || '')}</span>${b.boost || b.reserved ? '<span class="tag tag-promo">本期主打</span>' : ''}</div>
@@ -299,19 +298,21 @@
 `}
     </div>`;
     $('edit').onclick = () => go('needs');
-    $('sort').querySelectorAll('button').forEach(b => (b.onclick = () => { state.sort = b.dataset.v; save(); render(); }));
+    $('sort').querySelectorAll('button').forEach(b => (b.onclick = () => { state.sort = b.dataset.v; save(); rerenderKeepScroll(); }));
     el.querySelectorAll('[data-model]').forEach(c => (c.onclick = () => { state.modelId = c.dataset.model; save(); go('model'); }));
     el.querySelectorAll('[data-try]').forEach(b => (b.onclick = () => { pickBundle(bundles[+b.dataset.try]); go('floorplan'); }));
     el.querySelectorAll('[data-try-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); pickBundle(bestFor(b.dataset.tryModel)); go('floorplan'); }));
     el.querySelectorAll('[data-buy-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); const bb = bestFor(b.dataset.buyModel); if (bb) setBuy('bundle', bundleKey(bb)); else setBuy('model', b.dataset.buyModel); go('exit'); }));
-    if ($('moreModels')) $('moreModels').onclick = () => { showMoreModels = !showMoreModels; render(); };
-    if ($('moreBundles')) $('moreBundles').onclick = () => { showBundles = !showBundles; render(); };
+    if ($('moreModels')) $('moreModels').onclick = () => { showMoreModels = !showMoreModels; rerenderKeepScroll(); };
+    if ($('moreBundles')) $('moreBundles').onclick = () => { showBundles = !showBundles; rerenderKeepScroll(); };
     el.querySelectorAll('[data-buy-bundle]').forEach(b => (b.onclick = () => { setBuy('bundle', bundleKey(bundles[+b.dataset.buyBundle])); go('exit'); }));
     const cta = $('cta');
     if (cta) cta.onclick = () => { pickBundle((models[0] && bestFor(models[0].id)) || bundles[0]); go('floorplan'); };
   }
 
   let showMoreModels = false, showBundles = false;
+  // In-page toggles re-render the screen; keep the scroll position so the page does not jump to the top.
+  function rerenderKeepScroll() { const sc = $('screen'), y = sc.scrollTop; render(); sc.scrollTop = y; }
   function pickBundle(b) { if (b) { state.bundleId = bundleKey(b); save(); } }
 
   // ── 2_020 Model detail ──
@@ -608,7 +609,7 @@
       if (e.target.closest('button, input')) return;
       const k = h.dataset.toggle;
       state.openGroups = state.openGroups.includes(k) ? [] : [k]; // accordion: one group open at a time
-      save(); render();
+      save(); rerenderKeepScroll();
     }));
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
     el.querySelectorAll('[data-rec]').forEach(b => (b.onclick = () => openRecord(b.dataset.rec)));
