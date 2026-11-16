@@ -5,7 +5,7 @@
 
   // ── State (per-viewer convenience only; works without storage) ──
   const STORE = 'fpw_flow_state';
-  const initial = () => ({ p: [0], top: 0, s: [], styles: [], brands: [], tiers: [], includeTravel: false, area: 100, floors: 2, bh: 'wired', country: 'TW', sort: 'balanced', bundleId: null, modelId: null, seededKey: null, decisionsSeen: {}, prefsDone: false, brandOn: false, tierOn: false });
+  const initial = () => ({ p: [0], top: 0, s: [], styles: [], brands: [], tiers: [], includeTravel: false, area: 100, areaUnit: 'm2', floors: 2, bh: 'wired', country: 'TW', sort: 'balanced', bundleId: null, modelId: null, seededKey: null, decisionsSeen: {}, prefsDone: false, brandOn: false, tierOn: false });
   let state = initial();
   try { Object.assign(state, JSON.parse(localStorage.getItem(STORE)) || {}); } catch (e) { /* ignore */ }
   state.brands = (state.brands || []).filter(b => ['ASUS', 'ROG', 'TUF'].includes(b));
@@ -22,6 +22,8 @@
     const c = E.catalog(), u = engineInput();
     return { u, models: E.modelRank(c, u), bundles: E.calculate(c, u).rows };
   }
+  const PING = 3.3058; // 1 坪 = 3.3058 m²
+  const areaText = m2 => (state.areaUnit === 'ping' ? `${(m2 / PING).toFixed(1).replace(/\.0$/, '')} 坪` : `${Math.round(m2)} m²`);
   const bundleKey = b => b.r.id + '|' + (b.N > 1 ? b.n.id : '') + '|' + b.N;
   function currentBundle(bundles) {
     return bundles.find(b => bundleKey(b) === state.bundleId) || bundles[0] || null;
@@ -215,22 +217,32 @@
   function renderHomeSize(el) {
     el.innerHTML = `<div class="page">${qHeader(3, '你家的空間有多大？', '填寫大約數值即可，進入居家配置後可再依實際平面圖調整。')}
       <div class="q-cols">
-        <div class="field-card"><label class="field-label" for="area">室內總面積</label><div class="big-input"><input id="area" type="number" min="10" max="1000" step="1" inputmode="numeric"><span>m²</span></div><p class="muted small" id="ping" style="margin:10px 0 0"></p></div>
+        <div class="field-card"><div class="field-head"><label class="field-label" for="area">室內總面積</label><div class="seg seg-sm" id="unit"></div></div><div class="big-input"><input id="area" type="number" min="1" max="1000" step="any" inputmode="decimal"><span id="unitLabel"></span></div><p class="muted small" id="ping" style="margin:10px 0 0"></p></div>
         <div class="field-card"><span class="field-label">樓層數</span><div class="stepper"><button id="minus" aria-label="減少樓層">−</button><output id="floors"></output><button id="plus" aria-label="增加樓層">＋</button></div></div>
         <div class="field-card"><span class="field-label">主機與 Node 之間怎麼連（回程）</span><div class="seg" id="bh"></div><p class="muted small" style="margin:10px 0 0">家裡有預埋網路線就選有線，覆蓋與速度通常較好。</p></div>
         <div class="field-card"><label class="field-label" for="country">購買地區</label><select class="select" id="country"><option value="TW">台灣</option><option value="CN">中國</option><option value="DE">歐洲 · 德國</option><option value="US">美洲 · 美國</option></select><p class="muted small" style="margin:10px 0 0">目前只有台灣有可推薦機種與價表。</p></div>
       </div>
       <div class="q-foot"><button class="link-btn" id="back">‹ 上一步</button><button class="btn" id="next">看推薦結果</button></div></div>`;
     const draw = () => {
-      $('area').value = state.area;
-      $('ping').textContent = `約 ${(state.area / 3.3058).toFixed(1)} 坪 · 每層約 ${(state.area / state.floors).toFixed(0)} m²`;
+      const ping = state.areaUnit === 'ping';
+      $('unit').innerHTML = [['m2', 'm²'], ['ping', '坪']].map(([v, l]) => `<button class="${state.areaUnit === v ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
+      $('unit').querySelectorAll('button').forEach(b => (b.onclick = () => { state.areaUnit = b.dataset.v; save(); draw(); }));
+      $('unitLabel').textContent = ping ? '坪' : 'm²';
+      $('area').value = ping ? +(state.area / PING).toFixed(1) : +state.area.toFixed(1);
+      areaHint();
       $('floors').textContent = state.floors;
       $('bh').innerHTML = [['wired', '有線回程'], ['wireless', '無線回程（待驗證）']].map(([v, l]) => `<button class="${state.bh === v ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
       $('bh').querySelectorAll('button').forEach(b => (b.onclick = () => { state.bh = b.dataset.v; save(); draw(); }));
       $('country').value = state.country;
     };
     draw();
-    $('area').oninput = () => { const v = +$('area').value; if (v > 0) { state.area = v; save(); $('ping').textContent = `約 ${(v / 3.3058).toFixed(1)} 坪 · 每層約 ${(v / state.floors).toFixed(0)} m²`; } };
+    function areaHint() {
+      const perFloor = state.area / state.floors;
+      $('ping').textContent = state.areaUnit === 'ping'
+        ? `約 ${state.area.toFixed(0)} m² · 每層約 ${(perFloor / PING).toFixed(1)} 坪`
+        : `約 ${(state.area / PING).toFixed(1)} 坪 · 每層約 ${perFloor.toFixed(0)} m²`;
+    }
+    $('area').oninput = () => { const v = +$('area').value; if (v > 0) { state.area = state.areaUnit === 'ping' ? v * PING : v; save(); areaHint(); } };
     $('minus').onclick = () => { state.floors = Math.max(1, state.floors - 1); save(); draw(); };
     $('plus').onclick = () => { state.floors = Math.min(6, state.floors + 1); save(); draw(); };
     $('country').onchange = () => { state.country = $('country').value; save(); };
@@ -251,7 +263,7 @@
   function renderResults(el) {
     const { u, models, bundles } = results();
     const top4 = models.slice(0, 4), rest = models.slice(4);
-    const tags = [u.p.map(i => E.primaryNames[i] + (i === u.top && u.p.length > 1 ? '★' : '')).join('、'), ...u.s.map(i => E.secondaryNames[i]), `${u.area} m²`, `${u.floors} 層`, u.bh === 'wired' ? '有線回程' : '無線回程', state.brands.length ? '品牌：' + state.brands.join('／') : null, state.tiers.length ? '定位：' + state.tiers.map(t => E.tierNames[t]).join('／') : null].filter(Boolean);
+    const tags = [u.p.map(i => E.primaryNames[i] + (i === u.top && u.p.length > 1 ? '★' : '')).join('、'), ...u.s.map(i => E.secondaryNames[i]), areaText(u.area), `${u.floors} 層`, u.bh === 'wired' ? '有線回程' : '無線回程', state.brands.length ? '品牌：' + state.brands.join('／') : null, state.tiers.length ? '定位：' + state.tiers.map(t => E.tierNames[t]).join('／') : null].filter(Boolean);
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">推薦結果</div><h1 class="page-title" style="margin-top:6px">這些機種最適合你家</h1><div class="summary-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}</div></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="seg" id="sort"><button data-v="balanced" class="${state.sort !== 'cost' ? 'on' : ''}">平衡推薦</button><button data-v="cost" class="${state.sort === 'cost' ? 'on' : ''}">較低花費優先</button></div><button class="btn btn-ghost btn-sm" id="edit">修改條件</button></div></div>
@@ -388,7 +400,7 @@
       <div class="fp-bar">
         <span class="quick-ico" style="width:38px;height:38px">${I.plan}</span>
         <div><div class="fp-bar-title">${b ? `${esc(b.r.id)} × 1${b.N > 1 ? ` ＋ Node ${esc(b.n.id)} × ${b.N - 1}` : ''}` : '自由試用'}</div>
-          <div class="fp-bar-meta">${b ? `共 ${b.N} 台 · ${u.area} m² · ${u.floors} 層 · 已自動放進示意平面圖，可拖曳調整或上傳自家平面圖` : '未帶入推薦套組；可上傳平面圖並自行放置路由器'}</div></div>
+          <div class="fp-bar-meta">${b ? `共 ${b.N} 台 · ${areaText(u.area)} · ${u.floors} 層 · 已自動放進示意平面圖，可拖曳調整或上傳自家平面圖` : '未帶入推薦套組；可上傳平面圖並自行放置路由器'}</div></div>
         ${mapped.length ? `<span class="fp-warn" title="Floor plan 機種庫沒有同名型號，暫以近似機種模擬">${mapped.map(id => esc(id) + '→' + esc(FP_MODEL[id])).join('、')}</span>` : ''}
         <span class="spacer"></span>
         ${b ? '<button class="btn btn-ghost btn-sm" id="reseed" title="捨棄目前的調整，重新放入推薦套組">重新帶入</button>' : ''}
