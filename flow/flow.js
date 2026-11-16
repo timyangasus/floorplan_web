@@ -546,8 +546,8 @@
     const plansOnly = store.plans.filter(isPlan);
     const groups = recs.map(rc => ({ key: rc.id, rec: rc, plans: triedPlans(rc.prefs).sort((x, y) => y.updatedAt - x.updatedAt) }));
     const orphans = plansOnly.filter(p => !recOf(p)).sort((x, y) => y.updatedAt - x.updatedAt);
-    // 其他方案 is always listed as its own category (empty until a record with plans is deleted).
-    if (groups.length || orphans.length) groups.push({ key: 'other', rec: null, plans: orphans });
+    // 其他方案 only appears when there are plans whose 推薦紀錄 was deleted.
+    if (orphans.length) groups.push({ key: 'other', rec: null, plans: orphans });
     // New since the last visit: worked out once when entering the page, so badges stay during this visit.
     if (screenEntered || !plansVisitNew) {
       const seen = store.seenAt || 0;
