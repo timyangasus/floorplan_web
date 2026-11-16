@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ASUS WiFi 規劃</title>
+  <link rel="stylesheet" href="flow/flow.css">
+</head>
+<body>
+  <!-- Demo control bar (meta layer, not part of the product UI) -->
+  <div class="demo-bar" id="demo-bar">
+    <div class="demo-bar-pagenum-wrap">
+      <button class="demo-bar-pagenum-btn" id="demo-bar-pagenum-btn" title="跳到指定頁面編號">
+        <span class="demo-bar-pagenum" id="demo-bar-pagenum">--</span>
+        <span class="demo-bar-pagenum-arrow">&#9662;</span>
+      </button>
+      <div class="demo-bar-pagelist" id="demo-bar-pagelist"></div>
+    </div>
+    <span class="demo-bar-label">FLOW://</span>
+    <span class="demo-bar-desc" id="demo-bar-desc"></span>
+    <div class="demo-bar-decisions" id="demo-bar-decisions"></div>
+    <button class="demo-bar-reset" id="demo-bar-reset" title="清除所有選擇並回到起點">&#8634; RESET</button>
+  </div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-logo">/A</span>ASUS WiFi 規劃</div>
+      <div class="topbar-actions">
+        <button class="icon-btn" title="通知" aria-label="通知"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg></button>
+        <button class="icon-btn" title="搜尋" aria-label="搜尋"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg></button>
+      </div>
+    </header>
+    <nav class="rail" id="rail" aria-label="主要導覽"></nav>
+    <main class="content" id="screen"></main>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- Demo-only decision panel -->
+  <div class="flow-decision" id="flow-decision" role="dialog" aria-labelledby="flow-decision-title">
+    <button class="flow-decision-close" id="flow-decision-close" aria-label="關閉">&times;</button>
+    <span class="flow-decision-tag">DEMO 流程判斷</span>
+    <div class="flow-decision-title" id="flow-decision-title"></div>
+    <div class="flow-decision-options" id="flow-decision-options"></div>
+  </div>
+
+  <script src="flow/engine.js"></script>
+  <script src="flow/flow.js"></script>
+</body>
+</html>
