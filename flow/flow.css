@@ -537,6 +537,8 @@ svg { display: block; }
 .plan-icon { width: 28px; height: 28px; border-radius: 8px; color: var(--ink-3); display: inline-grid; place-items: center; font-size: 14px; }
 .plan-icon:hover { background: var(--panel); color: var(--ink); }
 .plan-meta { font-size: 13px; color: var(--ink-2); }
+.plan-time { margin-left: auto; flex-shrink: 0; font-size: 13px; color: var(--ink-2); background: var(--panel); border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.plan-del svg { display: block; }
 .plan-actions { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 14px; }
 .plan-actions .try-link { margin: 0; }
 .plan-del { margin-left: auto; }
