@@ -531,9 +531,8 @@ svg { display: block; }
 .plan-kind { position: absolute; top: 10px; right: 10px; }
 .tag-kind-plan { background: #fff; color: var(--accent-2); border-color: #b9d7ff; }
 .tag-kind-rec { background: #fff; color: #6b4fd6; border-color: #d6ccf7; }
-.rec-thumb { display: flex; align-items: flex-end; justify-content: center; gap: 10px; padding-top: 34px; }
-.rec-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 30%; height: 100%; }
-.rec-item img { width: 100%; flex: 1; min-height: 0; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(20, 30, 50, .12)); }
+.rec-thumb { padding: 16px; overflow: hidden; }
+.plan-thumb.rec-thumb img { width: auto; height: 118px; max-width: 70%; object-fit: contain; filter: drop-shadow(0 8px 14px rgba(20, 30, 50, .14)); }
 .plan-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .plan-name-row { display: flex; align-items: center; gap: 6px; }
 .plan-name { font-size: 18px; font-weight: 500; }

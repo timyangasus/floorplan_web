@@ -553,9 +553,9 @@
           <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button><button class="try-link" data-copy="${pl.id}">複製格局新增方案</button>${delBtn(pl)}</div>
         </div></div>`;
     const recCard = rc => `<div class="plan-card">
-        <div class="plan-thumb rec-thumb">${(rc.top || []).slice(0, 3).map((id, i) => `<span class="rec-item"><img src="${productImg(id)}" alt="" onerror="this.style.visibility='hidden'">${rankTag(i + 1)}</span>`).join('')}<span class="tag tag-kind-rec plan-kind">推薦紀錄</span></div>
+        <div class="plan-thumb rec-thumb">${rc.top && rc.top[0] ? `<img src="${productImg(rc.top[0])}" alt="${esc(rc.top[0])}" onerror="this.style.visibility='hidden'">` : ''}<span class="tag tag-kind-rec plan-kind">推薦紀錄</span></div>
         <div class="plan-body">${nameRow(rc)}
-          <div class="plan-meta">${esc((rc.top || []).join('、'))}</div>
+          <div class="plan-meta">${esc((rc.top || [])[0] || '')}</div>
           <div class="plan-meta muted">${esc(rc.prefs.p.map(i => E.primaryNames[i]).join('、'))} · ${areaOf(rc.prefs)} · ${rc.prefs.floors} 層 · ${fmtTime(rc.updatedAt)}</div>
           <div class="plan-actions"><button class="btn btn-sm" data-rec="${rc.id}">查看推薦</button><button class="try-link" data-rec-try="${rc.id}">在我家試擺</button>${delBtn(rc)}</div>
         </div></div>`;
