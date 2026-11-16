@@ -5,7 +5,7 @@
 
   // ── State (per-viewer convenience only; works without storage) ──
   const STORE = 'fpw_flow_state';
-  const initial = () => ({ p: [0], top: 0, s: [], style: 'none', brands: [], tiers: [], includeTravel: false, area: 100, floors: 2, bh: 'wired', country: 'TW', sort: 'balanced', bundleId: null, modelId: null, seededKey: null, decisionsSeen: {} });
+  const initial = () => ({ p: [0], top: 0, s: [], style: 'none', brands: [], tiers: [], includeTravel: false, area: 100, floors: 2, bh: 'wired', country: 'TW', sort: 'balanced', bundleId: null, modelId: null, seededKey: null, decisionsSeen: {}, prefsDone: false });
   let state = initial();
   try { Object.assign(state, JSON.parse(localStorage.getItem(STORE)) || {}); } catch (e) { /* ignore */ }
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) { /* ignore */ } };
@@ -48,7 +48,7 @@
 
   // ── Screens ──
   const SCREENS = [
-    { id: 'home', code: '0_010', rail: 'home', description: '首頁：說明能做什麼，入口為「開始規劃」或直接試用 Floor plan', render: renderHome },
+    { id: 'home', code: '0_010', rail: 'home', description: '首頁：說明三步驟流程，唯一入口「開始規劃」（有進度時可繼續）', render: renderHome },
     { id: 'needs', code: '1_010', rail: 'prefs', description: '偏好 1/3：主要用途（可複選，標記最重要的一項）', render: renderNeeds },
     { id: 'care', code: '1_020', rail: 'prefs', description: '偏好 2/3：還在意什麼、外觀、品牌與產品定位', render: renderCare },
     { id: 'home-size', code: '1_030', rail: 'prefs', description: '偏好 3/3：我家的樣子（面積、樓層、回程、地區）', render: renderHomeSize },
@@ -74,15 +74,10 @@
   function go(id) { location.hash = id; }
 
   // ── Rail ──
+  // The rail holds global destinations only; the planning flow itself is linear (see stepper).
   function renderRail(active) {
-    const items = [
-      ['home', 'home', I.home, '首頁'],
-      ['prefs', 'needs', I.prefs, '偏好設定'],
-      ['rank', 'results', I.rank, '推薦結果'],
-      ['plan', 'floorplan', I.plan, 'Floor plan'],
-    ];
-    $('rail').innerHTML = items.map(([k, to, ico, tip]) => `<button class="rail-btn${k === active ? ' active' : ''}" data-to="${to}" data-tip="${tip}" aria-label="${tip}">${ico}</button>`).join('')
-      + '<div class="rail-sep"></div><div class="rail-spacer"></div>'
+    $('rail').innerHTML = `<button class="rail-btn${active === 'home' ? ' active' : ''}" data-to="home" data-tip="首頁" aria-label="首頁">${I.home}</button>`
+      + '<div class="rail-spacer"></div>'
       + `<button class="rail-btn" data-href="router_recommendation_wireframe%201.html" data-tip="後台：機種資料與權重（另開）" aria-label="後台">${I.admin}</button>`
       + `<button class="rail-btn" data-tip="客服支援（示意）" aria-label="客服支援">${I.help}</button>`;
     $('rail').querySelectorAll('[data-to]').forEach(b => (b.onclick = () => go(b.dataset.to)));
@@ -91,7 +86,8 @@
 
   // ── 0_010 Home ──
   function renderHome(el) {
-    const hasResult = !!state.bundleId;
+    const max = unlocked();
+    const resume = state.prefsDone ? FLOW[max] : null;
     el.innerHTML = `<div class="page">
       <span class="pill-tag">✓ 免登入 · 約 3 分鐘</span>
       <div class="home-grid" style="margin-top:26px">
@@ -103,26 +99,25 @@
           </div>
           <button class="btn" id="start">開始規劃</button>
         </div>
-        <div class="quick-list">
-          <button class="quick" data-to="needs"><span class="quick-ico">${I.prefs}</span><span class="quick-body"><div class="quick-title">選擇偏好與空間</div><div class="quick-sub">用途 · 在意的功能 · 坪數樓層</div></span><span class="quick-arrow">›</span></button>
-          <button class="quick" data-to="results"><span class="quick-ico">${I.rank}</span><span class="quick-body"><div class="quick-title">${hasResult ? '回到上次的推薦' : '直接看熱門推薦'}</div><div class="quick-sub">${hasResult ? '沿用上次填寫的條件' : '使用預設條件：全屋覆蓋 · 100 m² · 2 層'}</div></span><span class="quick-arrow">›</span></button>
-          <button class="quick" id="tryPlan"><span class="quick-ico">${I.plan}</span><span class="quick-body"><div class="quick-title">直接試用 Floor plan</div><div class="quick-sub">上傳平面圖，自己擺放路由器</div></span><span class="quick-arrow">›</span></button>
+        <div>
+          <div class="flow-card">
+            <div class="flow-row"><span class="flow-num">1</span><div><div class="flow-row-title">偏好設定</div><div class="flow-row-sub">主要用途 · 在意的功能 · 我家的樣子，共 3 題</div></div></div>
+            <div class="flow-row"><span class="flow-num">2</span><div><div class="flow-row-title">推薦結果</div><div class="flow-row-sub">機種排行與主機＋Node 配置套組 Top 10</div><span class="flow-split">只想知道買什麼，到這裡就完成</span></div></div>
+            <div class="flow-row"><span class="flow-num">3</span><div><div class="flow-row-title">居家配置</div><div class="flow-row-sub">選好的套組自動放進平面圖，查看每個房間的訊號</div><span class="flow-split">想確認怎麼擺，繼續到這一步</span></div></div>
+          </div>
+          ${resume ? `<div class="resume"><span class="quick-ico">${resume.key === 'plan' ? I.plan : I.rank}</span><div><div class="quick-title">繼續上次進度</div><div class="quick-sub">已完成偏好設定${state.bundleId ? '，並選了配置套組' : ''}</div></div><button class="btn btn-sm" id="resume">前往${resume.label}</button></div>` : ''}
         </div>
       </div>
-      <div class="home-strip">
-        <div class="steps"><span>偏好</span><span>家的樣子</span><span>推薦排行</span><span>居家配置</span></div>
-        <div class="counter"><b>01</b> / 04</div>
-      </div>
+      <div class="home-strip"><div class="eyebrow">能幫你做什麼</div></div>
       <div class="journey">
-        <div class="journey-item"><div class="card-title">${I.prefs.replace('<svg', '<svg width="22"')} 主要用途</div><div class="num">6<small>種情境</small></div><p>全屋覆蓋、遊戲、居家工作、影音、直播、智慧家庭</p></div>
+        <div class="journey-item"><div class="card-title">${I.prefs} 主要用途</div><div class="num">6<small>種情境</small></div><p>全屋覆蓋、遊戲、居家工作、影音、直播、智慧家庭</p></div>
         <div class="journey-item"><div class="card-title">${I.smart} 我家的樣子</div><div class="num">1–6<small>層樓</small></div><p>面積與樓層決定最少需要幾台</p></div>
         <div class="journey-item"><div class="card-title">${I.rank} 推薦排行</div><div class="num">Top 10<small>套組</small></div><p>機種排行與主機＋Node 的配置套組</p></div>
         <div class="journey-item"><div class="card-title">${I.plan} 居家配置</div><div class="num">2D/3D<small>覆蓋</small></div><p>把推薦套組放進平面圖，看訊號覆蓋與 Mesh 路徑</p></div>
       </div>
     </div>`;
     $('start').onclick = () => go('needs');
-    el.querySelectorAll('[data-to]').forEach(b => (b.onclick = () => go(b.dataset.to)));
-    $('tryPlan').onclick = () => { state.bundleId = null; state.seededKey = 'blank'; save(); clearFloorplanProject(); go('floorplan'); };
+    if (resume) $('resume').onclick = () => go(resume.to);
   }
 
   function qHeader(step, title, sub) {
@@ -216,7 +211,7 @@
     $('back').onclick = () => go('care');
     $('next').onclick = () => {
       if (!(state.area > 0)) return toast('請輸入面積');
-      state.bundleId = null; save(); go('results');
+      state.bundleId = null; state.prefsDone = true; if (state.seededKey === 'blank') state.seededKey = null; save(); go('results');
     };
   }
 
@@ -393,7 +388,7 @@
       item.className = 'demo-bar-pagelist-item' + (s.id === cur ? ' current' : '');
       item.innerHTML = '<span class="demo-bar-pagelist-num"></span><span class="demo-bar-pagelist-desc"></span>';
       item.children[0].textContent = s.code; item.children[1].textContent = s.description;
-      item.onclick = () => { list.classList.remove('show'); go(s.id); };
+      item.onclick = () => { list.classList.remove('show'); unlockFor(s.id); go(s.id); };
       return item;
     }));
   }
@@ -435,11 +430,52 @@
   }
   $('flow-decision-close').onclick = closeDecision;
 
+  // ── Linear flow: 偏好設定 → 推薦結果 → 居家配置 ──
+  const FLOW = [
+    { key: 'prefs', label: '偏好設定', to: 'needs' },
+    { key: 'rank', label: '推薦結果', to: 'results' },
+    { key: 'plan', label: '居家配置', to: 'floorplan' },
+  ];
+  // Highest step the user has unlocked: prefs always; results after finishing the
+  // questionnaire; floor plan once a bundle was picked on the results page.
+  function unlocked() { return state.bundleId || state.seededKey === 'blank' ? 2 : state.prefsDone ? 1 : 0; }
+  function stepOf(s) { return FLOW.findIndex(f => f.key === s.rail); }
+
+  function renderStepper(s) {
+    const nav = $('flowSteps'), cur = stepOf(s);
+    nav.hidden = cur < 0;
+    if (cur < 0) return;
+    const max = unlocked();
+    const hints = ['填完 3 題就能看推薦', '選一組套組進入居家配置', '拖曳調整位置，查看訊號覆蓋'];
+    const finished = i => (i === 0 ? state.prefsDone : i === 1 ? !!state.bundleId : false);
+    nav.innerHTML = FLOW.map((f, i) => {
+      const cls = i === cur ? 'current' : i <= max ? 'done' : 'locked';
+      return (i ? `<span class="fs-line${finished(i - 1) ? ' done' : ''}"></span>` : '')
+        + `<button class="fs-step ${cls}" data-to="${f.to}" ${cls === 'locked' ? 'disabled' : ''} title="${cls === 'locked' ? '請先完成前一步' : f.label}"><span class="fs-dot">${i !== cur && finished(i) ? '✓' : i + 1}</span><span class="fs-label">${f.label}</span></button>`;
+    }).join('') + `<span class="fs-hint">${hints[cur]}</span>`;
+    nav.querySelectorAll('.fs-step:not([disabled])').forEach(b => (b.onclick = () => { if (b.dataset.to !== location.hash.slice(1)) go(b.dataset.to); }));
+  }
+
+  // Demo page list may jump anywhere: fill in prerequisites with defaults.
+  function unlockFor(id) {
+    const need = stepOf(screenById[id]);
+    if (need >= 1) state.prefsDone = true;
+    if (need >= 2 && !state.bundleId && state.seededKey !== 'blank') pickBundle(results().bundles[0]);
+    save();
+  }
+
   // ── Router ──
   function currentId() { const id = location.hash.slice(1); return screenById[id] ? id : SCREENS[0].id; }
   function render() {
-    const s = screenById[currentId()];
+    let s = screenById[currentId()];
+    const need = stepOf(s), max = unlocked();
+    if (need > max) {
+      toast(max === 0 ? '請先完成偏好設定' : '請先在推薦結果選一組套組');
+      location.replace('#' + FLOW[max].to);
+      return;
+    }
     if (s.id !== 'results') closeDecision();
+    renderStepper(s);
     updateDemoBar(s);
     renderRail(s.rail);
     const el = $('screen');
