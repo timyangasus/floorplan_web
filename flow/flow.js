@@ -175,9 +175,9 @@
       <div class="subopts" id="subopts"></div>
       <div class="q-foot"><button class="link-btn" id="back">‹ 上一步</button><button class="btn" id="next">下一步</button></div></div>`;
     const items = [
-      ...E.secondaryNames.map((label, i) => ({ key: 's' + i, label, on: () => state.s.includes(i), toggle: () => { state.s = state.s.includes(i) ? state.s.filter(x => x !== i) : [...state.s, i].sort(); if (i === 4 && !state.s.includes(4)) state.style = 'none'; } })),
-      { key: 'brand', label: '指定品牌／系列', on: () => state.brandOn, toggle: () => { state.brandOn = !state.brandOn; if (!state.brandOn) state.brands = []; } },
-      { key: 'tier', label: '指定產品定位', on: () => state.tierOn, toggle: () => { state.tierOn = !state.tierOn; if (!state.tierOn) state.tiers = []; } },
+      ...E.secondaryNames.map((label, i) => ({ key: 's' + i, label, on: () => state.s.includes(i), toggle: () => { state.s = state.s.includes(i) ? state.s.filter(x => x !== i) : [...state.s, i].sort(); if (i === 4) state.style = state.s.includes(4) ? 'quiet' : 'none'; } })),
+      { key: 'brand', label: '指定品牌／系列', on: () => state.brandOn, toggle: () => { state.brandOn = !state.brandOn; state.brands = state.brandOn ? ['ASUS'] : []; } },
+      { key: 'tier', label: '指定產品定位', on: () => state.tierOn, toggle: () => { state.tierOn = !state.tierOn; state.tiers = state.tierOn ? ['入門'] : []; } },
       { key: 'travel', label: '也看旅行機種', on: () => state.includeTravel, toggle: () => { state.includeTravel = !state.includeTravel; } },
     ];
     const opt = (group, v, label, on, sub) => `<button class="chip${on ? ' on' : ''}" data-g="${group}" data-v="${v}">${label}${sub ? `<span class="chip-sub">${sub}</span>` : ''}</button>`;
@@ -194,8 +194,15 @@
       $('sec').querySelectorAll('[data-k]').forEach(b => (b.onclick = () => { items.find(it => it.key === b.dataset.k).toggle(); save(); draw(); }));
       $('subopts').querySelectorAll('[data-g]').forEach(b => (b.onclick = () => {
         const v = b.dataset.v;
-        if (b.dataset.g === 'style') state.style = state.style === v ? 'none' : v;
-        else { const key = b.dataset.g === 'brand' ? 'brands' : 'tiers'; state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : [...state[key], v]; }
+        // Sub-options start with the first one picked; clearing them all unticks the parent item.
+        if (b.dataset.g === 'style') {
+          state.style = state.style === v ? 'none' : v;
+          if (state.style === 'none') state.s = state.s.filter(x => x !== 4);
+        } else {
+          const key = b.dataset.g === 'brand' ? 'brands' : 'tiers';
+          state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : [...state[key], v];
+          if (!state[key].length) state[b.dataset.g === 'brand' ? 'brandOn' : 'tierOn'] = false;
+        }
         save(); draw();
       }));
     };
