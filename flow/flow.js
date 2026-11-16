@@ -5,9 +5,12 @@
 
   // ── State (per-viewer convenience only; works without storage) ──
   const STORE = 'fpw_flow_state';
-  const initial = () => ({ p: [0], top: 0, s: [], style: 'none', brands: [], tiers: [], includeTravel: false, area: 100, floors: 2, bh: 'wired', country: 'TW', sort: 'balanced', bundleId: null, modelId: null, seededKey: null, decisionsSeen: {}, prefsDone: false });
+  const initial = () => ({ p: [0], top: 0, s: [], style: 'none', brands: [], tiers: [], includeTravel: false, area: 100, floors: 2, bh: 'wired', country: 'TW', sort: 'balanced', bundleId: null, modelId: null, seededKey: null, decisionsSeen: {}, prefsDone: false, brandOn: false, tierOn: false });
   let state = initial();
   try { Object.assign(state, JSON.parse(localStorage.getItem(STORE)) || {}); } catch (e) { /* ignore */ }
+  state.brands = (state.brands || []).filter(b => ['ASUS', 'ROG', 'TUF'].includes(b));
+  if (state.brands.length) state.brandOn = true;
+  if ((state.tiers || []).length) state.tierOn = true;
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) { /* ignore */ } };
 
   function engineInput() {
@@ -165,35 +168,38 @@
   }
 
   // ── 1_020 Care ──
+  // One checklist; picking 外觀與燈效 / 指定品牌 / 指定產品定位 reveals that item's sub-options.
   function renderCare(el) {
-    el.innerHTML = `<div class="page">${qHeader(2, '你還在意什麼？', '都可以不選。這些會影響排序，但不會排除機種（品牌與定位除外）。')}
-      <div class="q-section"><h3>在意的功能</h3><p class="muted">可複選</p><div class="chips" id="sec"></div></div>
-      <div class="q-cols">
-        <div class="field-card"><span class="field-label">外觀偏好 <span class="muted small" id="styleHint"></span></span><div class="seg" id="style"></div></div>
-        <div class="field-card"><span class="field-label">品牌／系列</span><div class="seg" id="brand"></div></div>
-        <div class="field-card"><span class="field-label">產品定位</span><div class="seg" id="tier"></div><p class="muted small" id="tierHint" style="margin:10px 0 0"></p></div>
-        <div class="field-card"><span class="field-label">其他</span><div class="chips"><button class="chip" id="travel">納入旅行系列機種</button></div><p class="muted small" style="margin:10px 0 0">只影響機種排行；旅行機種不參與配置套組。</p></div>
-      </div>
+    el.innerHTML = `<div class="page">${qHeader(2, '你還在意什麼？', '可複選，不選也可以。')}
+      <div class="chips chips-lg" id="sec"></div>
+      <div class="subopts" id="subopts"></div>
       <div class="q-foot"><button class="link-btn" id="back">‹ 上一步</button><button class="btn" id="next">下一步</button></div></div>`;
+    const items = [
+      ...E.secondaryNames.map((label, i) => ({ key: 's' + i, label, on: () => state.s.includes(i), toggle: () => { state.s = state.s.includes(i) ? state.s.filter(x => x !== i) : [...state.s, i].sort(); if (i === 4 && !state.s.includes(4)) state.style = 'none'; } })),
+      { key: 'brand', label: '指定品牌／系列', on: () => state.brandOn, toggle: () => { state.brandOn = !state.brandOn; if (!state.brandOn) state.brands = []; } },
+      { key: 'tier', label: '指定產品定位', on: () => state.tierOn, toggle: () => { state.tierOn = !state.tierOn; if (!state.tierOn) state.tiers = []; } },
+      { key: 'travel', label: '也看旅行機種', on: () => state.includeTravel, toggle: () => { state.includeTravel = !state.includeTravel; } },
+    ];
+    const opt = (group, v, label, on, sub) => `<button class="chip${on ? ' on' : ''}" data-g="${group}" data-v="${v}">${label}${sub ? `<span class="chip-sub">${sub}</span>` : ''}</button>`;
+    let shown = new Set();
     const draw = () => {
-      const styleOn = state.s.includes(4);
-      if (!styleOn) state.style = 'none';
-      $('sec').innerHTML = E.secondaryNames.map((n, i) => `<button class="chip${state.s.includes(i) ? ' on' : ''}" data-i="${i}">${n}</button>`).join('');
-      $('style').innerHTML = [['none', '無特別偏好'], ['quiet', '低調內置天線'], ['rgb', 'RGB 燈效']].map(([v, l]) => `<button class="${state.style === v ? 'on' : ''}" data-v="${v}" ${styleOn ? '' : 'disabled'}>${l}</button>`).join('');
-      $('styleHint').textContent = styleOn ? '' : '（先勾「外觀與燈效」）';
-      $('style').style.opacity = styleOn ? 1 : .45;
-      $('brand').innerHTML = [['', '全部'], ['ASUS', 'ASUS'], ['Gaming', 'ROG／TUF']].map(([v, l]) => `<button class="${(v ? state.brands.includes(v) : !state.brands.length) ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
-      $('tier').innerHTML = [['', '全部'], ['入門', E.tierNames['入門']], ['中階', E.tierNames['中階']], ['高階', E.tierNames['高階']]].map(([v, l]) => `<button class="${(v ? state.tiers.includes(v) : !state.tiers.length) ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
-      $('tierHint').textContent = state.tiers.length ? state.tiers.map(t => E.tierNames[t] + '：' + E.tierDescriptions[t]).join('；') : '不限定位，所有等級都會參與排名。';
-      $('travel').classList.toggle('on', state.includeTravel);
-      $('sec').querySelectorAll('.chip').forEach(b => (b.onclick = () => { const i = +b.dataset.i; state.s = state.s.includes(i) ? state.s.filter(x => x !== i) : [...state.s, i].sort(); save(); draw(); }));
-      $('style').querySelectorAll('button').forEach(b => (b.onclick = () => { if (!styleOn) return; state.style = b.dataset.v; save(); draw(); }));
-      const multi = (key, v) => { if (!v) state[key] = []; else state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : [...state[key], v]; save(); draw(); };
-      $('brand').querySelectorAll('button').forEach(b => (b.onclick = () => multi('brands', b.dataset.v)));
-      $('tier').querySelectorAll('button').forEach(b => (b.onclick = () => multi('tiers', b.dataset.v)));
+      $('sec').innerHTML = items.map(it => `<button class="chip${it.on() ? ' on' : ''}" data-k="${it.key}">${it.on() ? '✓ ' : ''}${it.label}</button>`).join('');
+      const panels = [];
+      if (state.s.includes(4)) panels.push(`<div class="subopt" data-p="style"><span class="subopt-label">外觀偏好</span><div class="chips">${opt('style', 'quiet', '低調內置天線', state.style === 'quiet')}${opt('style', 'rgb', 'RGB 燈效', state.style === 'rgb')}</div></div>`);
+      if (state.brandOn) panels.push(`<div class="subopt" data-p="brand"><span class="subopt-label">品牌／系列</span><div class="chips">${['ASUS', 'ROG', 'TUF'].map(v => opt('brand', v, v, state.brands.includes(v))).join('')}</div><span class="subopt-hint">${!state.brands.length || state.brands.length === 3 ? '不限品牌' : '只看 ' + state.brands.join('、')}</span></div>`);
+      if (state.tierOn) panels.push(`<div class="subopt" data-p="tier"><span class="subopt-label">產品定位</span><div class="chips">${['入門', '中階', '高階'].map(v => opt('tier', v, E.tierNames[v], state.tiers.includes(v), E.tierDescriptions[v])).join('')}</div><span class="subopt-hint">${!state.tiers.length || state.tiers.length === 3 ? '不限定位' : ''}</span></div>`);
+      $('subopts').innerHTML = panels.join('');
+      $('subopts').querySelectorAll('[data-p]').forEach(p => p.classList.toggle('still', shown.has(p.dataset.p)));
+      shown = new Set([...$('subopts').querySelectorAll('[data-p]')].map(p => p.dataset.p));
+      $('sec').querySelectorAll('[data-k]').forEach(b => (b.onclick = () => { items.find(it => it.key === b.dataset.k).toggle(); save(); draw(); }));
+      $('subopts').querySelectorAll('[data-g]').forEach(b => (b.onclick = () => {
+        const v = b.dataset.v;
+        if (b.dataset.g === 'style') state.style = state.style === v ? 'none' : v;
+        else { const key = b.dataset.g === 'brand' ? 'brands' : 'tiers'; state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : [...state[key], v]; }
+        save(); draw();
+      }));
     };
     draw();
-    $('travel').onclick = () => { state.includeTravel = !state.includeTravel; save(); draw(); };
     $('back').onclick = () => go('needs');
     $('next').onclick = () => go('home-size');
   }

@@ -42,7 +42,8 @@
     return structuredClone(defaults);
   }
 
-  const brandGroup = m => (['ROG', 'TUF'].includes(m.series) ? 'Gaming' : 'ASUS');
+  // Consumer flow filters by ASUS (non-ROG/TUF), ROG and TUF separately.
+  const brandGroup = m => (m.series === 'ROG' ? 'ROG' : m.series === 'TUF' ? 'TUF' : 'ASUS');
   const brandMatch = (m, groups) => !groups || !groups.length || groups.includes(brandGroup(m));
   const tierMatch = (m, tiers) => !tiers || !tiers.length || tiers.includes(m.positioning);
   function campaignPriority(c, id) { const i = (c.campaigns || []).indexOf(id); return c.slot === 'off' || i < 0 ? 0 : [1, .7, .4][i]; }
