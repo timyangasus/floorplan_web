@@ -48,7 +48,7 @@
 
   // ── Screens ──
   const SCREENS = [
-    { id: 'home', code: '0_010', rail: 'home', description: '首頁：說明三步驟流程，唯一入口「開始規劃」（有進度時可繼續）', render: renderHome },
+    { id: 'home', code: '0_010', rail: 'home', description: '首頁：大字標題＋「開始規劃」主按鈕（有進度時下方可繼續），下方為功能 banner', render: renderHome },
     { id: 'needs', code: '1_010', rail: 'prefs', description: '偏好 1/3：主要用途（可複選，標記最重要的一項）', render: renderNeeds },
     { id: 'care', code: '1_020', rail: 'prefs', description: '偏好 2/3：還在意什麼、外觀、品牌與產品定位', render: renderCare },
     { id: 'home-size', code: '1_030', rail: 'prefs', description: '偏好 3/3：我家的樣子（面積、樓層、回程、地區）', render: renderHomeSize },
@@ -89,25 +89,15 @@
     const max = unlocked();
     const resume = state.prefsDone ? FLOW[max] : null;
     el.innerHTML = `<div class="page">
-      <span class="pill-tag">✓ 免登入 · 約 3 分鐘</span>
-      <div class="home-grid" style="margin-top:26px">
-        <div>
-          <h1 class="hero-title">嗨，<br>來規劃你家的 WiFi</h1>
-          <div class="home-meta">
-            <div>告訴我們你的用途與空間 <span class="muted">· 推薦適合的機種與台數</span></div>
-            <div>放進你家的平面圖 <span class="muted">· 模擬每個房間的訊號覆蓋</span></div>
-          </div>
-          <button class="btn" id="start">開始規劃</button>
+      <section class="hero">
+        <h1 class="hero-title">嗨，<br>來規劃你家的 WiFi</h1>
+        <div class="home-meta">
+          <div>告訴我們你的用途與空間 <span class="muted">· 推薦適合的機種與台數</span></div>
+          <div>放進你家的平面圖 <span class="muted">· 模擬每個房間的訊號覆蓋</span></div>
         </div>
-        <div>
-          <div class="flow-card">
-            <div class="flow-row"><span class="flow-num">1</span><div><div class="flow-row-title">偏好設定</div><div class="flow-row-sub">主要用途 · 在意的功能 · 我家的樣子，共 3 題</div></div></div>
-            <div class="flow-row"><span class="flow-num">2</span><div><div class="flow-row-title">推薦結果</div><div class="flow-row-sub">機種排行與主機＋Node 配置套組 Top 10</div><span class="flow-split">只想知道買什麼，到這裡就完成</span></div></div>
-            <div class="flow-row"><span class="flow-num">3</span><div><div class="flow-row-title">居家配置</div><div class="flow-row-sub">選好的套組自動放進平面圖，查看每個房間的訊號</div><span class="flow-split">想確認怎麼擺，繼續到這一步</span></div></div>
-          </div>
-          ${resume ? `<div class="resume"><span class="quick-ico">${resume.key === 'plan' ? I.plan : I.rank}</span><div><div class="quick-title">繼續上次進度</div><div class="quick-sub">已完成偏好設定${state.bundleId ? '，並選了配置套組' : ''}</div></div><button class="btn btn-sm" id="resume">前往${resume.label}</button></div>` : ''}
-        </div>
-      </div>
+        <div class="hero-cta"><button class="btn btn-xl" id="start">開始規劃 <span class="btn-arrow">→</span></button><span class="muted">約 3 分鐘 · 免登入</span></div>
+        ${resume ? `<div class="resume"><span class="quick-ico">${resume.key === 'plan' ? I.plan : I.rank}</span><div><div class="quick-title">繼續上次進度</div><div class="quick-sub">已完成偏好設定${state.bundleId ? '，並選了配置套組' : ''}</div></div><button class="btn btn-ghost btn-sm" id="resume">前往${resume.label}</button></div>` : ''}
+      </section>
       <div class="home-strip"><div><div class="eyebrow">能幫你做什麼</div><h2 class="promo-heading">從挑機種到擺位置，一次搞定</h2></div></div>
       ${promoBanners()}
     </div>`;
