@@ -445,7 +445,7 @@
     const el = $('screen');
     el.scrollTop = 0;
     s.render(el);
-    document.title = 'ASUS WiFi 規劃';
+    document.title = 'ASUS WiFi Floor Plan';
   }
   if (new URLSearchParams(location.search).get('demo') === '0') document.body.classList.add('no-demo');
   // '#try' = free floor plan trial without a recommendation (used by the landing page)
