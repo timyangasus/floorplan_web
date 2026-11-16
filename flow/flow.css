@@ -573,3 +573,10 @@ svg { display: block; }
   .grp-head { flex-wrap: wrap; }
   .grp-main { flex-basis: calc(100% - 100px); }
 }
+
+/* New-data hints for 我的規劃 */
+.rail-dot { position: absolute; top: 9px; right: 9px; width: 9px; height: 9px; border-radius: 50%; background: #f5733b; box-shadow: 0 0 0 2px var(--card); }
+.rail-btn.active .rail-dot { box-shadow: 0 0 0 2px #2a7bf6; }
+.tag-new { background: linear-gradient(90deg, #ffa24c, #f5733b); color: #fff; letter-spacing: .5px; }
+.plan-card.is-new { box-shadow: 0 0 0 2px #ffb27a, var(--shadow); }
+.plan-card.is-new.current { box-shadow: var(--shadow); }

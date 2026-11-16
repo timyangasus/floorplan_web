@@ -95,7 +95,7 @@
   // The rail holds global destinations only; the planning flow itself is linear (see stepper).
   function renderRail(active) {
     $('rail').innerHTML = `<button class="rail-btn${active === 'home' ? ' active' : ''}" data-to="home" data-tip="首頁" aria-label="首頁">${I.home}</button>`
-      + `<button class="rail-btn${active === 'plans' ? ' active' : ''}" data-to="plans" data-tip="我的規劃" aria-label="我的規劃">${I.plans}</button>`
+      + `<button class="rail-btn${active === 'plans' ? ' active' : ''}" data-to="plans" data-tip="我的規劃" aria-label="我的規劃${hasNewPlans() ? '（有新資料）' : ''}">${I.plans}${hasNewPlans() ? '<span class="rail-dot"></span>' : ''}</button>`
       + '<div class="rail-spacer"></div>'
       + `<button class="rail-btn" data-href="router_recommendation_wireframe%201.html" data-tip="後台：機種資料與權重（另開）" aria-label="後台">${I.admin}</button>`
       + `<button class="rail-btn" data-tip="帳號（示意）" aria-label="帳號">${I.account}</button>`;
@@ -417,6 +417,7 @@
   }
   // Two kinds of entries: 'plan' (went into 居家配置, has a floor plan) and 'rec' (只看推薦: prefs + top picks).
   const isPlan = x => x.kind !== 'rec';
+  const hasNewPlans = () => store.plans.some(x => x.createdAt > (store.seenAt || 0));
   const activePlan = () => store.plans.find(x => x.id === store.activeId && isPlan(x)) || null;
   const prefSig = pr => JSON.stringify(Object.fromEntries(PREF_KEYS.filter(k => k !== 'sort').map(k => [k, pr[k]])));
   const samePrefs = (a, b) => prefSig(a) === prefSig(b);
@@ -544,6 +545,20 @@
     const orphans = plansOnly.filter(p => !recOf(p)).sort((x, y) => y.updatedAt - x.updatedAt);
     // 其他方案 is always listed as its own category (empty until a record with plans is deleted).
     if (groups.length || orphans.length) groups.push({ key: 'other', rec: null, plans: orphans });
+    // New since the last visit: worked out once when entering the page, so badges stay during this visit.
+    if (screenEntered || !plansVisitNew) {
+      const seen = store.seenAt || 0;
+      plansVisitNew = new Set(store.plans.filter(x => x.createdAt > seen).map(x => x.id));
+      if (plansVisitNew.size) {
+        const newest = store.plans.filter(x => plansVisitNew.has(x.id)).sort((a, b) => b.createdAt - a.createdAt)[0];
+        const g = groups.find(x => (x.rec && x.rec.id === newest.id) || x.plans.some(p => p.id === newest.id));
+        if (g) state.openGroups = [g.key];
+      }
+      store.seenAt = Date.now(); savePlans();
+      renderRail('plans');
+    }
+    const isNew = x => plansVisitNew.has(x.id);
+    const newTag = '<span class="tag tag-new">NEW</span>';
     // Open groups: remembered per viewer; by default the group holding the open plan (or the first).
     if (Array.isArray(state.openGroups) && state.openGroups.length > 1) state.openGroups = state.openGroups.slice(-1);
     if (!Array.isArray(state.openGroups)) {
@@ -554,10 +569,10 @@
     const renameBtn = x => `<button class="plan-icon" data-rename="${x.id}" title="改名" aria-label="改名">✎</button>`;
     const delBtn = x => `<button class="plan-icon plan-del" data-del="${x.id}" title="刪除" aria-label="刪除"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7,21q-0.82,0-1.41-0.59T5,19V6H4V4H9V3h6V4h5V6H19V19q0,0.82-0.59,1.41T17,21H7ZM17,6H7V19H17V6ZM9,17h2V8H9v9Zm4,0h2V8H13v9ZM7,6V19V6Z"/></svg></button>`;
     const created = (x, cls = '') => `<span class="plan-time ${cls}" title="建立時間">${fmtTime(x.createdAt)}</span>`;
-    const planCard = pl => `<div class="plan-card${pl.id === store.activeId ? ' current' : ''}">
+    const planCard = pl => `<div class="plan-card${pl.id === store.activeId ? ' current' : ''}${isNew(pl) ? ' is-new' : ''}">
         <div class="plan-thumb">${planThumb(pl)}${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
         <div class="plan-body">
-          <div class="plan-name-row"><span class="plan-name">${esc(pl.name)}</span>${renameBtn(pl)}${created(pl, 'plan-time-inline')}</div>
+          <div class="plan-name-row">${isNew(pl) ? newTag : ''}<span class="plan-name">${esc(pl.name)}</span>${renameBtn(pl)}${created(pl, 'plan-time-inline')}</div>
           <div class="plan-meta">${esc(pl.label)}</div>
           <div class="plan-meta muted">共 ${pl.units} 台 · ${areaOf(pl.prefs)} · ${pl.prefs.floors} 層</div>
           <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button>${delBtn(pl)}</div>
@@ -565,13 +580,13 @@
     const groupHead = g => g.rec
       ? `<div class="grp-icon">${g.rec.top && g.rec.top[0] ? `<img src="${productImg(g.rec.top[0])}" alt="" onerror="this.style.visibility='hidden'">` : ''}</div>
          <div class="grp-main">
-           <div class="plan-name-row"><span class="tag tag-kind-rec">推薦紀錄</span><span class="plan-name">${esc(g.rec.name)}</span>${renameBtn(g.rec)}</div>
+           <div class="plan-name-row"><span class="tag tag-kind-rec">推薦紀錄</span>${isNew(g.rec) || g.plans.some(isNew) ? newTag : ''}<span class="plan-name">${esc(g.rec.name)}</span>${renameBtn(g.rec)}</div>
            <div class="plan-meta">${esc((g.rec.top || [])[0] || '')}　<span class="muted">${esc(g.rec.prefs.p.map(i => E.primaryNames[i]).join('、'))} · ${areaOf(g.rec.prefs)} · ${g.rec.prefs.floors} 層</span></div>
          </div>
          <span class="grp-count">${g.plans.length ? `${g.plans.length} 個方案` : '尚未試擺'}</span>
          <button class="btn btn-ghost btn-sm" data-rec="${g.rec.id}">查看推薦</button>${delBtn(g.rec)}${created(g.rec)}`
       : `<div class="grp-icon grp-icon-other">${I.plans}</div>
-         <div class="grp-main"><div class="plan-name-row"><span class="plan-name">其他方案</span></div></div>
+         <div class="grp-main"><div class="plan-name-row"><span class="plan-name">其他方案</span>${g.plans.some(isNew) ? newTag : ''}</div></div>
          <span class="grp-count">${g.plans.length ? `${g.plans.length} 個方案` : '沒有方案'}</span>`;
     const groupBlock = g => {
       const open = state.openGroups.includes(g.key);
@@ -774,10 +789,12 @@
     const cur = lastAttached;
     state = Object.assign(initial(), JSON.parse(JSON.stringify(cur.prefs)), { prefsDone: true, bundleId: cur.bundleId, decisionsSeen: { next: true } });
     store.activeId = cur.id;
+    const newestPlan = store.plans.filter(isPlan).sort((a, b) => b.createdAt - a.createdAt)[0];
+    store.seenAt = newestPlan.createdAt - 1; plansVisitNew = null; // 方案 6 shows as new
     clearFloorplanProject(); savePlans(); save();
     decisions = []; renderDecisionBar(); closeDecision();
-    if (currentId() === 'plans') render(); else go('plans');
-    toast('已載入示範資料：2 筆推薦紀錄、6 個方案');
+    if (currentId() === 'home') render(); else go('home');
+    toast('已載入示範資料：2 筆推薦紀錄、6 個方案（我的規劃有 1 筆新資料）');
   }
   $('demo-bar-sample').onclick = seedDemo;
 
@@ -851,11 +868,12 @@
 
   // ── Router ──
   function currentId() { const id = location.hash.slice(1); return screenById[id] ? id : SCREENS[0].id; }
-  let prevScreen = null;
+  let prevScreen = null, screenEntered = true, plansVisitNew = null;
   function render() {
     let s = screenById[currentId()];
     if (prevScreen === 'floorplan' && s.id !== 'floorplan') capturePlan();
     pendingToasts.forEach(clearTimeout); pendingToasts = [];
+    screenEntered = prevScreen !== s.id;
     prevScreen = s.id;
     const need = stepOf(s), max = unlocked();
     if (need > max) {
@@ -870,6 +888,7 @@
     const el = $('screen');
     el.scrollTop = 0;
     s.render(el);
+    renderRail(s.rail); // pages may add records/plans while rendering: refresh the new-data dot
     document.title = 'ASUS WiFi Floor Plan';
   }
   if (new URLSearchParams(location.search).get('demo') === '0') document.body.classList.add('no-demo');
