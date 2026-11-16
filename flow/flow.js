@@ -203,7 +203,8 @@
         const v = b.dataset.v;
         // Sub-options start with the first one picked; clearing them all unticks the parent item.
         const key = { style: 'styles', brand: 'brands', tier: 'tiers' }[b.dataset.g];
-        state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : [...state[key], v];
+        if (key === 'tiers') state.tiers = state.tiers.includes(v) ? [] : [v]; // 產品定位: single choice
+        else state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : [...state[key], v];
         if (!state[key].length) {
           if (key === 'styles') state.s = state.s.filter(x => x !== 4);
           else state[key === 'brands' ? 'brandOn' : 'tierOn'] = false;
