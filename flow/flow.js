@@ -73,7 +73,7 @@
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
     { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；換套組會另存新方案，可新增方案複製格局', render: renderFloorplan },
-    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：未完成（偏好沒填完）＋推薦紀錄（看完推薦即完成）＋居家配置方案，可開啟、改名、刪除、複製格局新增方案', render: renderPlans },
+    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：未完成（偏好沒填完）＋依推薦紀錄分組，展開看到從它試擺的方案；推薦紀錄刪除後方案移到「其他方案」', render: renderPlans },
   ];
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
 
@@ -566,7 +566,7 @@
           <div class="plan-name-row"><span class="plan-name">${esc(pl.name)}</span>${renameBtn(pl)}</div>
           <div class="plan-meta">${esc(pl.label)}</div>
           <div class="plan-meta muted">共 ${pl.units} 台 · ${areaOf(pl.prefs)} · ${pl.prefs.floors} 層 · ${fmtTime(pl.updatedAt)}</div>
-          <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button><button class="try-link" data-copy="${pl.id}">複製格局新增方案</button>${delBtn(pl)}</div>
+          <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button>${delBtn(pl)}</div>
         </div></div>`;
     const groupHead = g => g.rec
       ? `<div class="grp-icon">${g.rec.top && g.rec.top[0] ? `<img src="${productImg(g.rec.top[0])}" alt="" onerror="this.style.visibility='hidden'">` : ''}</div>
@@ -602,7 +602,6 @@
     }));
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
     el.querySelectorAll('[data-rec]').forEach(b => (b.onclick = () => openRecord(b.dataset.rec)));
-    el.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => startNewPlan(b.dataset.copy)));
     if ($('resumePending')) $('resumePending').onclick = () => go('needs');
     if ($('dropPending')) $('dropPending').onclick = () => {
       if (!confirm('捨棄這個未完成的規劃？')) return;
