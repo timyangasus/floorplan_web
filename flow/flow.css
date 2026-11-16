@@ -61,6 +61,7 @@ svg { display: block; }
 .demo-bar-pagelist-desc { color: #c9d1d9; line-height: 1.55; }
 .demo-bar-reset { margin-left: auto; flex-shrink: 0; font-size: 10px; background: #161b22; color: #8b949e; border: 1px solid #30363d; border-radius: 4px; padding: 3px 8px; }
 .demo-bar-reset:hover { border-color: #7ee787; color: #7ee787; }
+.demo-bar-reset2 { margin-left: 0; }
 .demo-bar-decisions { display: flex; gap: 6px; flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
 .demo-bar-decisions::-webkit-scrollbar { display: none; }
 .demo-bar-decision { font-family: inherit; font-size: 10px; background: #161b22; color: #7ee787; border: 1px solid #30363d; border-radius: 4px; padding: 3px 6px; cursor: pointer; }

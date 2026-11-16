@@ -751,6 +751,53 @@
     if (currentId() === 'home') render(); else go('home');
   };
 
+  // Demo data for meetings: 2 推薦紀錄 (2 + 1 plans) and 3 其他方案 (plans without a record).
+  function seedDemo() {
+    const day = 86400000;
+    const scenarios = [
+      { rec: true, prefs: { p: [0] }, tries: [0, 1] },                                        // 全屋覆蓋
+      { rec: true, prefs: { p: [0, 1], top: 1, s: [2] }, tries: [0] },                        // 全屋覆蓋＋遊戲
+      { rec: false, prefs: { p: [2], s: [0] }, tries: [0] },                                  // 居家工作
+      { rec: false, prefs: { p: [3], s: [4], styles: ['quiet'] }, tries: [0] },               // 影音串流
+      { rec: false, prefs: { p: [5], s: [1], area: 40 * PING, floors: 3 }, tries: [0] },      // 智慧家庭 3 層
+    ];
+    store = { activeId: null, seq: 0, recSeq: 0, plans: [] };
+    let ts = Date.now() - 6 * day, layout = null, lastAttached = null;
+    scenarios.forEach(sc => {
+      state = Object.assign(initial(), sc.prefs, { prefsDone: true, decisionsSeen: { next: true } });
+      const { u, models, bundles } = results();
+      if (sc.rec) {
+        store.recSeq += 1;
+        store.plans.push({ id: 'rc_demo' + store.recSeq, kind: 'rec', name: '推薦紀錄 ' + store.recSeq, createdAt: ts, updatedAt: ts + sc.tries.length * .6 * day, prefs: prefsOf(), top: models.slice(0, 3).map(m => m.id), bundle: bundles[0] ? bundleLabel(bundles[0]) : '' });
+      }
+      sc.tries.forEach(i => {
+        const b = bundles[i];
+        if (!b) return;
+        ts += .6 * day;
+        const same = layout && layout.floors.length === b.floorUnits.length ? layout : null;
+        const { project } = placeOnLayout(b, u, same);
+        if (!layout) layout = project;
+        // Vary the main unit's spot a little so each demo plan looks like a different placement.
+        const main = project.floors[0].routers[0], shift = [[0, 0], [-170, -90], [150, 60], [-120, 80], [160, -100], [60, 110]][store.seq % 6];
+        if (main) main.position = { x: Math.round(main.position.x + shift[0]), y: Math.round(main.position.y + shift[1]) };
+        store.seq += 1;
+        const plan = { id: 'pl_demo' + store.seq, name: '方案 ' + store.seq, createdAt: ts, updatedAt: ts, prefs: prefsOf(), bundleId: bundleKey(b), label: bundleLabel(b), units: b.N, project };
+        store.plans.push(plan);
+        if (sc.rec) lastAttached = plan;
+      });
+      ts += .4 * day;
+    });
+    // Open the newest plan that belongs to a record; 我的規劃 expands its group.
+    const cur = lastAttached;
+    state = Object.assign(initial(), JSON.parse(JSON.stringify(cur.prefs)), { prefsDone: true, bundleId: cur.bundleId, decisionsSeen: { next: true } });
+    store.activeId = cur.id;
+    clearFloorplanProject(); savePlans(); save();
+    decisions = []; renderDecisionBar(); closeDecision();
+    if (currentId() === 'plans') render(); else go('plans');
+    toast('已載入示範資料：2 筆推薦紀錄、6 個方案');
+  }
+  $('demo-bar-sample').onclick = seedDemo;
+
   function openDecision(name) {
     const d = DECISIONS[name];
     $('flow-decision-title').textContent = d.title;
