@@ -134,23 +134,24 @@
   }
 
   function qHeader(step, title, sub) {
-    return `<div class="q-head"><div><div class="eyebrow">STEP ${step} / 3</div><h1 class="page-title" style="margin-top:6px">${title}</h1><p class="page-sub">${sub}</p></div><div class="counter"><b>0${step}</b> / 03</div></div>
-      <div class="steps"><span class="${step === 1 ? 'on' : ''}">主要用途</span><span class="${step === 2 ? 'on' : ''}">在意什麼</span><span class="${step === 3 ? 'on' : ''}">我家的樣子</span></div>
+    return `<div class="q-head"><div><div class="eyebrow">STEP ${step} / 3 · ${['主要用途', '在意什麼', '我家的樣子'][step - 1]}</div><h1 class="page-title" style="margin-top:6px">${title}</h1><p class="page-sub">${sub}</p></div><div class="counter"><b>0${step}</b> / 03</div></div>
       <div class="q-progress"><span style="width:${step * 33.34}%"></span></div>`;
   }
 
   // ── 1_010 Needs ──
   function renderNeeds(el) {
-    el.innerHTML = `<div class="page">${qHeader(1, '主要拿網路做什麼？', '可複選。點「最重要」標記一項，推薦時會加倍考量。')}
+    el.innerHTML = `<div class="page">${qHeader(1, '主要拿網路做什麼？', '可複選，選你最常用的情境。')}
       <div class="tiles" id="tiles"></div>
+      <p class="q-hint" id="topHint"></p>
       <div class="q-foot"><button class="link-btn" data-to="home">‹ 回首頁</button><button class="btn" id="next">下一步</button></div></div>`;
     const draw = () => {
       if (!state.p.includes(state.top)) state.top = state.p[0];
       $('tiles').innerHTML = E.primaryNames.map((n, i) => {
         const on = state.p.includes(i);
-        return `<button class="tile${on ? ' on' : ''}" data-i="${i}"><span class="tile-check">${on ? '✓' : ''}</span><span class="tile-ico">${primaryIcons[i]}</span><span class="tile-title">${n}</span><span class="tile-sub">${primarySubs[i]}</span>${on && state.p.length > 1 ? `<span class="star${state.top === i ? ' on' : ''}" data-star="${i}">★ 最重要</span>` : ''}</button>`;
+        return `<button class="tile${on ? ' on' : ''}" data-i="${i}"><span class="tile-check">${on ? '✓' : ''}</span><span class="tile-ico">${primaryIcons[i]}</span><span class="tile-title">${n}</span><span class="tile-sub">${primarySubs[i]}</span>${on && state.p.length > 1 ? `<span class="star${state.top === i ? ' on' : ''}" data-star="${i}">${state.top === i ? '★ 最重要' : '☆ 設為最重要'}</span>` : ''}</button>`;
       }).join('');
       $('next').disabled = !state.p.length;
+      $('topHint').innerHTML = state.p.length > 1 ? `選了 ${state.p.length} 項：推薦會以「<b>${E.primaryNames[state.top]}</b>」為主。想換的話，點其他卡片右下角的「☆ 設為最重要」。` : state.p.length ? '' : '至少選一項才能繼續。';
       $('tiles').querySelectorAll('.tile').forEach(t => (t.onclick = e => {
         const i = +t.dataset.i;
         if (e.target.dataset.star) { state.top = i; }

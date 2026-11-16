@@ -314,7 +314,10 @@ svg { display: block; }
 .tile-check { position: absolute; top: 16px; right: 16px; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #c8cdd3; display: grid; place-items: center; color: #fff; font-size: 13px; }
 .tile.on .tile-check { background: var(--accent); border-color: var(--accent); }
 .star { position: absolute; bottom: 14px; right: 14px; font-size: 12px; color: var(--ink-3); padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); }
+.star:hover { border-color: #f1a33a; color: #b4650f; }
 .star.on { color: #fff; background: #f1a33a; border-color: #f1a33a; }
+.q-hint { min-height: 22px; margin: 16px 0 0; font-size: 14px; color: var(--ink-2); }
+.q-hint b { color: #b4650f; font-weight: 600; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 10px; }
 .chip { padding: 9px 18px; border-radius: 999px; background: var(--card); border: 1.5px solid var(--line); font-size: 14px; transition: all .15s; }
