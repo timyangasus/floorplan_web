@@ -590,3 +590,12 @@ svg { display: block; }
 .ask-danger { background: #e2604f; box-shadow: none; }
 .ask-danger:hover { box-shadow: 0 6px 16px rgba(226, 96, 79, .3); }
 @keyframes ask-fade { from { opacity: 0; } }
+
+/* Results: top 3 + suggested configuration */
+.gauges-3 { grid-template-columns: repeat(3, 1fr); }
+.gauge-config { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--panel); font-size: 13px; line-height: 1.5; }
+.gauge-config-label { display: block; font-size: 11px; color: var(--ink-3); letter-spacing: .5px; margin-bottom: 2px; }
+.more-toggle { display: inline-block; margin: 14px 24px 0 0; font-size: 14px; }
+.more-models { margin-top: 10px; }
+@media (max-width: 1100px) { .gauges-3 { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 860px) { .gauges-3 { grid-template-columns: 1fr; } }

@@ -265,22 +265,26 @@
     const tryLabel = b => (b && tried.has(bundleKey(b)) ? '開啟方案' : '在我家試擺');
     if (u.country === 'TW') recordRecommendation(models, bundles);
     if (state.inProgress) { state.inProgress = false; save(); }
-    const top4 = models.slice(0, 4), rest = models.slice(4);
+    const top3 = models.slice(0, 3), rest = models.slice(3);
+    const cfgText = b => `${esc(b.r.id)} × 1${b.N > 1 ? ` ＋ ${esc(b.n.id)} × ${b.N - 1}` : ''}<span class="muted">　共 ${b.N} 台</span>`;
     const tags = [u.p.map(i => E.primaryNames[i] + (i === u.top && u.p.length > 1 ? '★' : '')).join('、'), ...u.s.map(i => E.secondaryNames[i]), areaText(u.area), `${u.floors} 層`, u.bh === 'wired' ? '有線回程' : '無線回程', state.brands.length ? '品牌：' + state.brands.join('／') : null, state.tiers.length ? '定位：' + state.tiers.map(t => E.tierNames[t]).join('／') : null].filter(Boolean);
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">推薦結果</div><div class="title-row"><h1 class="page-title">這些機種最適合你家</h1><button class="btn btn-ghost btn-sm" id="edit">修改條件</button></div><div class="summary-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}</div></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="seg" id="sort"><button data-v="balanced" class="${state.sort !== 'cost' ? 'on' : ''}">平衡推薦</button><button data-v="cost" class="${state.sort === 'cost' ? 'on' : ''}">較低花費優先</button></div></div></div>
       ${u.country !== 'TW' ? '<div class="card empty" style="margin-top:24px">此地區尚未建立價表與可推薦機種，請改選台灣。</div>' : `
-      <div class="section-head"><div><h2>推薦機種排行</h2><div class="muted small">每型號一筆 · 已納入你的面積與樓層 · 點卡片看詳情</div></div></div>
-      ${top4.length ? `<div class="gauges">${top4.map((m, i) => `<div class="gauge-card" data-model="${esc(m.id)}">
+      <div class="section-head"><div><h2>推薦機種</h2><div class="muted small">依你的需求與空間挑出的前 3 名 · 點卡片看詳情</div></div></div>
+      ${top3.length ? `<div class="gauges gauges-3">${top3.map((m, i) => `<div class="gauge-card" data-model="${esc(m.id)}">
         <div class="gauge-name-row">${rankTag(i + 1)}<div class="gauge-name" title="${esc(m.id)}">${esc(m.id)}</div></div>
         <div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div>
         <div class="gauge-body"><div class="gauge-photo">${m.active ? '<span class="tag tag-promo photo-tag">本期主打</span>' : ''}<img src="${productImg(m.id)}" alt="${esc(m.id)}" loading="lazy" onerror="this.style.visibility='hidden'"></div>
-        <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>最少 ${m.N} 台</li><li>${m.m.ai ? 'AI 核心' : '一般核心'}</li></ul></div>
+        <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>${m.m.ai ? 'AI 核心' : '一般核心'}</li></ul></div>
+        ${bestFor(m.id) ? `<div class="gauge-config"><span class="gauge-config-label">建議配置</span><div>${cfgText(bestFor(m.id))}</div></div>` : ''}
         <div class="gauge-foot"><div class="gauge-actions">${bestFor(m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">${tryLabel(bestFor(m.id))}</button>` : ''}${cartBtn(`data-buy-model="${esc(m.id)}"`)}</div><div class="gauge-badges">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div></div></div>`).join('')}</div>
-        ${rest.length ? `<div class="more-models">${rest.map((m, i) => `<button data-model="${esc(m.id)}">${rankTag(i + 5)}<span>${esc(m.id)}</span></button>`).join('')}</div>` : ''}` : '<div class="card empty">沒有符合目前品牌／定位與空間條件的機種，請調整條件。</div>'}
+        ${rest.length ? `<button class="link-btn more-toggle" id="moreModels">${showMoreModels ? '收起更多機種' : `查看更多機種（${rest.length}）`} ›</button>
+        ${showMoreModels ? `<div class="more-models">${rest.map((m, i) => `<button data-model="${esc(m.id)}">${rankTag(i + 4)}<span>${esc(m.id)}</span></button>`).join('')}</div>` : ''}` : ''}` : '<div class="card empty">沒有符合目前品牌／定位與空間條件的機種，請調整條件。</div>'}
 
-      <div class="section-head"><div><h2>推薦配置套組 · Top ${bundles.length}</h2><div class="muted small">主機＋Node 的組合與最少台數；選一組放進你家試擺</div></div></div>
+      ${bundles.length ? `<button class="link-btn more-toggle" id="moreBundles">${showBundles ? '收起其他配置組合' : `查看其他配置組合（${bundles.length}）`} ›</button>` : ''}
+      ${showBundles ? `<div class="section-head"><div><h2>其他配置組合 · Top ${bundles.length}</h2><div class="muted small">主機＋Node 的不同搭配與最少台數</div></div></div>
       ${bundles.length ? `<div class="bundles">${bundles.map((b, i) => `<div class="bundle">
         <div class="bundle-rank">${String(i + 1).padStart(2, '0')}</div>
         <div><div class="bundle-name">${esc(b.r.id)}${b.N > 1 ? ` <span class="muted">＋ ${esc(b.n.id)}</span>` : ''}${i === 0 ? ' <span class="tag tag-rank1" title="最推薦">★</span>' : ''}</div>
@@ -289,9 +293,9 @@
         <div class="bundle-units"><b>${b.N}</b><small>台</small><div>${b.N > 1 ? `主機 1 ＋ Node ${b.N - 1}` : '主機 1'}</div></div>
         <div class="bundle-actions"><button class="btn btn-sm${tried.has(bundleKey(b)) ? ' btn-ghost' : ''}" data-try="${i}">${tryLabel(b)}</button>${cartBtn(`data-buy-bundle="${i}"`)}</div>
         <details><summary>推薦理由與限制</summary>依你選的用途與在意的功能評估；台數是此面積與樓層下的最低預估，不是實測保證。${u.bh === 'wired' ? '有線' : '無線'}回程與混搭相容仍待驗證。</details>
-      </div>`).join('')}</div>` : '<div class="card empty">沒有符合條件的配置套組，請調整條件。</div>'}
+      </div>`).join('')}</div>` : '<div class="card empty">沒有符合條件的配置套組，請調整條件。</div>'}` : ''}
 
-      <div class="cta-band"><div><h3>想知道放在家裡哪裡最好？</h3><p>把第一名套組放進你家的平面圖，看每個房間的訊號覆蓋。</p></div><div class="cta-actions"><button class="btn" id="cta" ${bundles.length ? '' : 'disabled'}>開始居家配置 →</button>${bundles.length ? cartBtn('data-buy-bundle="0"', 'cart-btn-light') : ''}</div></div>
+      <div class="cta-band"><div><h3>想知道放在家裡哪裡最好？</h3><p>把第一名機種的建議配置放進你家的平面圖，看每個房間的訊號覆蓋。</p></div><div class="cta-actions"><button class="btn" id="cta" ${bundles.length ? '' : 'disabled'}>開始居家配置 →</button>${models[0] && bestFor(models[0].id) ? cartBtn(`data-buy-model="${esc(models[0].id)}"`, 'cart-btn-light') : ''}</div></div>
 `}
     </div>`;
     $('edit').onclick = () => go('needs');
@@ -299,12 +303,15 @@
     el.querySelectorAll('[data-model]').forEach(c => (c.onclick = () => { state.modelId = c.dataset.model; save(); go('model'); }));
     el.querySelectorAll('[data-try]').forEach(b => (b.onclick = () => { pickBundle(bundles[+b.dataset.try]); go('floorplan'); }));
     el.querySelectorAll('[data-try-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); pickBundle(bestFor(b.dataset.tryModel)); go('floorplan'); }));
-    el.querySelectorAll('[data-buy-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); setBuy('model', b.dataset.buyModel); go('exit'); }));
+    el.querySelectorAll('[data-buy-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); const bb = bestFor(b.dataset.buyModel); if (bb) setBuy('bundle', bundleKey(bb)); else setBuy('model', b.dataset.buyModel); go('exit'); }));
+    if ($('moreModels')) $('moreModels').onclick = () => { showMoreModels = !showMoreModels; render(); };
+    if ($('moreBundles')) $('moreBundles').onclick = () => { showBundles = !showBundles; render(); };
     el.querySelectorAll('[data-buy-bundle]').forEach(b => (b.onclick = () => { setBuy('bundle', bundleKey(bundles[+b.dataset.buyBundle])); go('exit'); }));
     const cta = $('cta');
-    if (cta) cta.onclick = () => { pickBundle(bundles[0]); go('floorplan'); };
+    if (cta) cta.onclick = () => { pickBundle((models[0] && bestFor(models[0].id)) || bundles[0]); go('floorplan'); };
   }
 
+  let showMoreModels = false, showBundles = false;
   function pickBundle(b) { if (b) { state.bundleId = bundleKey(b); save(); } }
 
   // ── 2_020 Model detail ──
@@ -342,7 +349,7 @@
   function renderExit(el) {
     const { bundles, models, allBundles } = results();
     const buy = state.buy || {};
-    const bundle = buy.kind === 'bundle' ? bundles.find(x => bundleKey(x) === buy.id) : null;
+    const bundle = buy.kind === 'bundle' ? allBundles.find(x => bundleKey(x) === buy.id) : null;
     const model = buy.kind === 'model' ? buy.id : null;
     const items = bundle ? (bundle.N > 1 && bundle.n.id !== bundle.r.id ? [[bundle.r.id, 1], [bundle.n.id, bundle.N - 1]] : [[bundle.r.id, bundle.N]]) : model ? [[model, (models.find(x => x.id === model) || {}).N || 1]] : [];
     const planBundle = bundle || (model && allBundles.find(x => x.r.id === model)) || bundles[0];
