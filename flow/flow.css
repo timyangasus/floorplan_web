@@ -538,7 +538,7 @@ svg { display: block; }
 .plan-icon:hover { background: var(--panel); color: var(--ink); }
 .plan-meta { font-size: 13px; color: var(--ink-2); }
 .plan-time { position: absolute; top: 16px; right: 22px; font-size: 13px; font-weight: 600; line-height: 1.4; color: #4a4f57; white-space: nowrap; }
-.plan-thumb .plan-time { top: 12px; right: 14px; background: rgba(255, 255, 255, .9); border-radius: 999px; padding: 3px 10px; }
+.plan-time.plan-time-inline { position: static; margin-left: auto; }
 .grp:not(.grp-other) .grp-head { position: relative; padding-top: 44px; }
 .btn-outline { background: #fff; color: var(--accent-2); border: 1.5px solid var(--accent); box-shadow: none; }
 .btn-outline:hover { background: var(--accent-soft); box-shadow: none; }
