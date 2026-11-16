@@ -73,7 +73,7 @@
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
     { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；換套組會另存新方案，可新增方案複製格局', render: renderFloorplan },
-    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：未完成（偏好沒填完）＋依推薦紀錄分組，展開看到從它試擺的方案；推薦紀錄刪除後方案移到「其他方案」', render: renderPlans },
+    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：依推薦紀錄分組，展開看到從它試擺的方案；推薦紀錄刪除後方案移到「其他方案」', render: renderPlans },
   ];
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
 
@@ -550,15 +550,6 @@
       const cur = activePlan(), g = groups.find(x => cur && x.plans.includes(cur)) || groups[0];
       state.openGroups = g ? [g.key] : [];
     }
-    const pending = state.inProgress && state.seededKey !== 'blank';
-    const src = state.newPlanFrom && store.plans.find(x => x.id === state.newPlanFrom);
-    const pendingCard = pending ? `<div class="pending-card">
-        <span class="quick-ico">${I.prefs}</span>
-        <div class="pending-body"><div class="pending-title">未完成的規劃 <span class="tag tag-rank">未完成</span></div>
-          <div class="quick-sub">偏好設定還沒填完${src ? `　·　新增方案，沿用「${esc(src.name)}」的格局` : ''}</div>
-          <div class="quick-sub">${esc(state.p.map(i => E.primaryNames[i]).join('、'))} · ${areaText(state.area)} · ${state.floors} 層</div></div>
-        <button class="link-btn" id="dropPending">捨棄</button><button class="btn btn-sm" id="resumePending">繼續填寫</button>
-      </div>` : '';
     const areaOf = pr => (pr.areaUnit === 'ping' ? (pr.area / PING).toFixed(0) + ' 坪' : Math.round(pr.area) + ' m²');
     const renameBtn = x => `<button class="plan-icon" data-rename="${x.id}" title="改名" aria-label="改名">✎</button>`;
     const delBtn = x => `<button class="plan-icon plan-del" data-del="${x.id}" title="刪除" aria-label="刪除"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7,21q-0.82,0-1.41-0.59T5,19V6H4V4H9V3h6V4h5V6H19V19q0,0.82-0.59,1.41T17,21H7ZM17,6H7V19H17V6ZM9,17h2V8H9v9Zm4,0h2V8H13v9ZM7,6V19V6Z"/></svg></button>`;
@@ -594,8 +585,7 @@
       <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
         <p class="page-sub">${groups.length ? counts + '；點推薦紀錄展開從它試擺的方案' : '還沒有紀錄。看完推薦結果或進入居家配置後，會自動存在這裡。'}</p></div>
         ${plansOnly.length ? '<button class="btn btn-sm btn-outline" id="newPlan">＋ 新增方案</button>' : ''}</div>
-      ${pendingCard}
-      ${groups.length ? `<div class="grp-list">${groups.map(groupBlock).join('')}</div>` : (pending ? '' : `<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
+      ${groups.length ? `<div class="grp-list">${groups.map(groupBlock).join('')}</div>` : (`<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
     </div>`;
     el.querySelectorAll('[data-toggle]').forEach(h => (h.onclick = e => {
       if (e.target.closest('button, input')) return;
@@ -605,14 +595,6 @@
     }));
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
     el.querySelectorAll('[data-rec]').forEach(b => (b.onclick = () => openRecord(b.dataset.rec)));
-    if ($('resumePending')) $('resumePending').onclick = () => go('needs');
-    if ($('dropPending')) $('dropPending').onclick = () => {
-      if (!confirm('捨棄這個未完成的規劃？')) return;
-      const cur = activePlan();
-      if (cur) { Object.assign(state, JSON.parse(JSON.stringify(cur.prefs))); state.bundleId = cur.bundleId; state.prefsDone = true; }
-      else { state.prefsDone = false; state.bundleId = null; }
-      state.newPlanFrom = null; state.inProgress = false; save(); render();
-    };
     el.querySelectorAll('[data-del]').forEach(b => (b.onclick = () => {
       const x = store.plans.find(y => y.id === b.dataset.del);
       if (!x) return;
@@ -895,6 +877,13 @@
   function route() {
     if (location.hash === '#try') { state.bundleId = null; state.seededKey = 'blank'; save(); clearFloorplanProject(); location.replace('#floorplan'); return; }
     render();
+  }
+  // Unfinished questionnaire is not kept across visits: back to the open plan's prefs, or defaults.
+  if (state.inProgress || !state.prefsDone) {
+    const cur = activePlan();
+    if (cur) state = Object.assign(state, JSON.parse(JSON.stringify(cur.prefs)), { bundleId: cur.bundleId, prefsDone: true });
+    else state = Object.assign(initial(), { decisionsSeen: state.decisionsSeen || {}, seededKey: state.seededKey === 'blank' ? 'blank' : null });
+    state.newPlanFrom = null; state.inProgress = false; save();
   }
   window.addEventListener('hashchange', route);
   window.addEventListener('beforeunload', () => capturePlan());
