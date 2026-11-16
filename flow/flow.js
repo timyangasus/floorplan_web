@@ -274,7 +274,7 @@
         <div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div>
         <div class="gauge-body"><div class="gauge-photo"><img src="${productImg(m.id)}" alt="${esc(m.id)}" loading="lazy" onerror="this.style.visibility='hidden'"></div>
         <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>最少 ${m.N} 台</li><li>${m.m.ai ? 'AI 核心' : '一般核心'}</li></ul></div>
-        <div class="gauge-foot">${m.active || m.m.special !== '無' ? `<div class="gauge-badges">${m.active ? '<span class="tag tag-promo">本期主打</span>' : ''}${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div>` : ''}${bundles.some(b => b.r.id === m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">在我家試擺</button>` : ''}</div></div>`).join('')}</div>
+        <div class="gauge-foot">${bundles.some(b => b.r.id === m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">在我家試擺</button>` : '<span></span>'}<div class="gauge-badges">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}${m.active ? '<span class="tag tag-promo">本期主打</span>' : ''}</div></div></div>`).join('')}</div>
         ${rest.length ? `<div class="more-models">${rest.map((m, i) => `<button data-model="${esc(m.id)}">${rankTag(i + 5)}<span>${esc(m.id)}</span></button>`).join('')}</div>` : ''}` : '<div class="card empty">沒有符合目前品牌／定位與空間條件的機種，請調整條件。</div>'}
 
       <div class="section-head"><div><h2>推薦配置套組 · Top ${bundles.length}</h2><div class="muted small">主機＋Node 的組合與最少台數；選一組放進你家試擺</div></div></div>
