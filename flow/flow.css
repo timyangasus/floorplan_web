@@ -532,6 +532,11 @@ svg { display: block; }
 .tag-kind-plan { background: #fff; color: var(--accent-2); border-color: #b9d7ff; }
 .tag-kind-rec { background: #fff; color: #6b4fd6; border-color: #d6ccf7; }
 .rec-thumb { padding: 16px; overflow: hidden; }
+.rec-tried { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--ink-3); }
+.rec-tried-chip { font-size: 12px; color: var(--accent-2); background: var(--accent-soft); border-radius: 999px; padding: 2px 10px; }
+.rec-tried-chip:hover { background: #d8e9ff; }
+.plan-from { font-size: 12px; color: #6b4fd6; padding: 0; }
+.plan-from:hover { text-decoration: underline; }
 .plan-thumb.rec-thumb img { width: auto; height: 118px; max-width: 70%; object-fit: contain; filter: drop-shadow(0 8px 14px rgba(20, 30, 50, .14)); }
 .plan-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .plan-name-row { display: flex; align-items: center; gap: 6px; }

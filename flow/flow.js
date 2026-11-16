@@ -265,6 +265,8 @@
   // ── 2_010 Results ──
   function renderResults(el) {
     const { u, models, bundles } = results();
+    const tried = state.newPlanFrom ? new Map() : new Map(triedPlans(prefsOf()).map(x => [x.bundleId, x]));
+    const tryLabel = b => (b && tried.has(bundleKey(b)) ? '開啟方案' : '在我家試擺');
     if (u.country === 'TW') recordRecommendation(models, bundles);
     if (state.inProgress) { state.inProgress = false; save(); }
     const top4 = models.slice(0, 4), rest = models.slice(4);
@@ -279,7 +281,7 @@
         <div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div>
         <div class="gauge-body"><div class="gauge-photo">${m.active ? '<span class="tag tag-promo photo-tag">本期主打</span>' : ''}<img src="${productImg(m.id)}" alt="${esc(m.id)}" loading="lazy" onerror="this.style.visibility='hidden'"></div>
         <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>最少 ${m.N} 台</li><li>${m.m.ai ? 'AI 核心' : '一般核心'}</li></ul></div>
-        <div class="gauge-foot"><div class="gauge-actions">${bundles.some(b => b.r.id === m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">在我家試擺</button>` : ''}${cartBtn(`data-buy-model="${esc(m.id)}"`)}</div><div class="gauge-badges">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div></div></div>`).join('')}</div>
+        <div class="gauge-foot"><div class="gauge-actions">${bundles.some(b => b.r.id === m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">${tryLabel(bundles.find(b => b.r.id === m.id))}</button>` : ''}${cartBtn(`data-buy-model="${esc(m.id)}"`)}</div><div class="gauge-badges">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div></div></div>`).join('')}</div>
         ${rest.length ? `<div class="more-models">${rest.map((m, i) => `<button data-model="${esc(m.id)}">${rankTag(i + 5)}<span>${esc(m.id)}</span></button>`).join('')}</div>` : ''}` : '<div class="card empty">沒有符合目前品牌／定位與空間條件的機種，請調整條件。</div>'}
 
       <div class="section-head"><div><h2>推薦配置套組 · Top ${bundles.length}</h2><div class="muted small">主機＋Node 的組合與最少台數；選一組放進你家試擺</div></div></div>
@@ -289,7 +291,7 @@
           <div class="bundle-meta"><span>${b.N === 1 ? '單機' : 'AiMesh'}</span><span>WiFi ${b.r.wifi}</span><span>各樓層 ${b.floorUnits.join(' / ')} 台</span><span>${esc(E.tierNames[b.r.positioning] || '')}</span>${b.boost || b.reserved ? '<span class="tag tag-promo">本期主打</span>' : ''}</div>
           </div>
         <div class="bundle-units"><b>${b.N}</b><small>台</small><div>${b.N > 1 ? `主機 1 ＋ Node ${b.N - 1}` : '主機 1'}</div></div>
-        <div class="bundle-actions"><button class="btn btn-sm" data-try="${i}">在我家試擺</button>${cartBtn(`data-buy-bundle="${i}"`)}</div>
+        <div class="bundle-actions"><button class="btn btn-sm${tried.has(bundleKey(b)) ? ' btn-ghost' : ''}" data-try="${i}">${tryLabel(b)}</button>${cartBtn(`data-buy-bundle="${i}"`)}</div>
         <details><summary>推薦理由與限制</summary>依你選的用途與在意的功能評估；台數是此面積與樓層下的最低預估，不是實測保證。${u.bh === 'wired' ? '有線' : '無線'}回程與混搭相容仍待驗證。</details>
       </div>`).join('')}</div>` : '<div class="card empty">沒有符合條件的配置套組，請調整條件。</div>'}
 
@@ -416,14 +418,17 @@
   // Two kinds of entries: 'plan' (went into 居家配置, has a floor plan) and 'rec' (只看推薦: prefs + top picks).
   const isPlan = x => x.kind !== 'rec';
   const activePlan = () => store.plans.find(x => x.id === store.activeId && isPlan(x)) || null;
-  const samePrefs = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const prefSig = pr => JSON.stringify(Object.fromEntries(PREF_KEYS.filter(k => k !== 'sort').map(k => [k, pr[k]])));
+  const samePrefs = (a, b) => prefSig(a) === prefSig(b);
+  // Plans tried from the same recommendation (same prefs), keyed by bundle.
+  const triedPlans = prefs => store.plans.filter(x => isPlan(x) && samePrefs(x.prefs, prefs));
+  const recOf = plan => store.plans.find(x => x.kind === 'rec' && samePrefs(x.prefs, plan.prefs)) || null;
 
   // Viewing the results counts as finishing (the ~30% who only want to know what to buy):
   // keep a 推薦紀錄 for these prefs unless a plan with the same prefs already exists.
   function recordRecommendation(models, bundles) {
     if (!models.length && !bundles.length) return;
     const prefs = prefsOf();
-    if (store.plans.some(x => isPlan(x) && samePrefs(x.prefs, prefs))) return;
     const top = models.slice(0, 3).map(m => m.id), bundle = bundles[0] ? bundleLabel(bundles[0]) : '';
     const rec = store.plans.find(x => x.kind === 'rec' && samePrefs(x.prefs, prefs));
     if (rec) { rec.top = top; rec.bundle = bundle; rec.updatedAt = Date.now(); }
@@ -486,7 +491,6 @@
     const { project, rebuilt } = placeOnLayout(b, u, layout);
     store.seq += 1;
     const plan = { id: 'pl_' + Date.now(), name: '方案 ' + store.seq, createdAt: Date.now(), updatedAt: Date.now(), prefs: prefsOf(), bundleId: bundleKey(b), label: bundleLabel(b), units: b.N, project };
-    store.plans = store.plans.filter(x => !(x.kind === 'rec' && samePrefs(x.prefs, plan.prefs)));
     store.plans.unshift(plan); store.activeId = plan.id;
     savePlans();
     return { plan, rebuilt };
@@ -549,6 +553,7 @@
         <div class="plan-thumb">${planThumb(pl)}<span class="tag tag-kind-plan plan-kind">居家配置</span>${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
         <div class="plan-body">${nameRow(pl)}
           <div class="plan-meta">${esc(pl.label)}</div>
+          ${(() => { const rc = recOf(pl); return rc ? `<div class="plan-meta"><button class="plan-from" data-rec="${rc.id}">來自 ${esc(rc.name)}</button></div>` : ''; })()}
           <div class="plan-meta muted">共 ${pl.units} 台 · ${areaOf(pl.prefs)} · ${pl.prefs.floors} 層 · ${fmtTime(pl.updatedAt)}</div>
           <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button><button class="try-link" data-copy="${pl.id}">複製格局新增方案</button>${delBtn(pl)}</div>
         </div></div>`;
@@ -557,7 +562,8 @@
         <div class="plan-body">${nameRow(rc)}
           <div class="plan-meta">${esc((rc.top || [])[0] || '')}</div>
           <div class="plan-meta muted">${esc(rc.prefs.p.map(i => E.primaryNames[i]).join('、'))} · ${areaOf(rc.prefs)} · ${rc.prefs.floors} 層 · ${fmtTime(rc.updatedAt)}</div>
-          <div class="plan-actions"><button class="btn btn-sm" data-rec="${rc.id}">查看推薦</button><button class="try-link" data-rec-try="${rc.id}">在我家試擺</button>${delBtn(rc)}</div>
+          ${(() => { const tp = triedPlans(rc.prefs); return tp.length ? `<div class="rec-tried"><span>已試擺 ${tp.length} 組</span>${tp.map(x => `<button class="rec-tried-chip" data-open="${x.id}">${esc(x.name)}</button>`).join('')}</div>` : ''; })()}
+          <div class="plan-actions"><button class="btn btn-sm" data-rec="${rc.id}">查看推薦</button>${delBtn(rc)}</div>
         </div></div>`;
     const counts = [plansOnly.length ? `${plansOnly.length} 個方案` : '', recs.length ? `${recs.length} 筆推薦紀錄` : ''].filter(Boolean).join(' · ');
     el.innerHTML = `<div class="page">
@@ -570,7 +576,6 @@
     </div>`;
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
     el.querySelectorAll('[data-rec]').forEach(b => (b.onclick = () => openRecord(b.dataset.rec, false)));
-    el.querySelectorAll('[data-rec-try]').forEach(b => (b.onclick = () => openRecord(b.dataset.recTry, true)));
     if ($('resumePending')) $('resumePending').onclick = () => go('needs');
     if ($('dropPending')) $('dropPending').onclick = () => {
       if (!confirm('捨棄這個未完成的規劃？')) return;
@@ -612,7 +617,8 @@
     if (!blank) {
       capturePlan();
       const cur = activePlan();
-      const samePrefs = cur && JSON.stringify(cur.prefs) === JSON.stringify(prefsOf());
+      const prefsMatch = cur && samePrefs(cur.prefs, prefsOf());
+      const existing = triedPlans(prefsOf()).find(x => x.bundleId === state.bundleId);
       if (state.newPlanFrom && b) {
         // Explicit 新增方案: copy the source plan's layout.
         const src = store.plans.find(x => x.id === state.newPlanFrom);
@@ -620,9 +626,15 @@
         plan = r.plan; state.newPlanFrom = null; save();
         note = r.rebuilt ? `已建立${plan.name}；樓層數不同，已重新產生示意格局` : `已建立${plan.name}，沿用「${src ? src.name : '原方案'}」的格局`;
         fresh = loadPlanIntoApp(plan);
-      } else if (cur && cur.bundleId === state.bundleId && samePrefs) {
+      } else if (cur && cur.bundleId === state.bundleId && prefsMatch) {
         plan = cur;
         if (state.loadedPlanId !== cur.id) fresh = loadPlanIntoApp(cur);
+      } else if (existing) {
+        // Already tried this bundle for this recommendation: reopen that plan instead of duplicating it.
+        capturePlan();
+        plan = existing; store.activeId = existing.id; savePlans();
+        fresh = loadPlanIntoApp(existing);
+        note = `已開啟${existing.name}`;
       } else if (b) {
         // Different bundle or prefs: keep the current plan, save this one as a new plan on the same layout.
         const r = createPlan(b, u, cur && cur.project);
