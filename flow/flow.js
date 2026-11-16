@@ -73,6 +73,7 @@
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
     { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；換套組會另存新方案，可新增方案複製格局', render: renderFloorplan },
     { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：我的家底下的所有方案（各自保存偏好、套組、擺放位置），可開啟、改名、刪除、複製格局新增方案', render: renderPlans },
+    { id: 'compare', code: '4_020', rail: 'plans', description: '方案比較：兩個方案並排，比較各樓層配置、估算訊號（強／中／弱）、台數、套組與偏好', render: renderCompare },
   ];
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
 
@@ -489,9 +490,9 @@
     go('needs');
   }
 
-  // Small SVG preview of a plan's first floor (walls + devices).
-  function planThumb(plan) {
-    const f = plan.project && plan.project.floors && plan.project.floors[0];
+  // Small SVG preview of one floor of a plan (walls + devices).
+  function planThumb(plan, floorIndex = 0) {
+    const f = plan.project && plan.project.floors && plan.project.floors[floorIndex];
     const walls = (f && f.walls) || [], routers = (f && f.routers) || [];
     const pts = walls.flatMap(w => [w.start, w.end]).concat(routers.map(r => r.position));
     if (!pts.length) return `<img src="${productImg((plan.bundleId || '').split('|')[0])}" alt="">`;
@@ -503,15 +504,91 @@
       + '</svg>';
   }
 
+  // ── Simple coverage estimate (for comparing plans; the app's heatmap is the reference) ──
+  // 5 GHz free-space path loss + per-wall material loss + 15 dB per floor. Each model's
+  // power is scaled so free-space RSSI hits -67 dBm at the radius of its catalog coverage area.
+  const WALL_LOSS = { concrete: 15, brick: 5, drywall: 3, drywall_heavy: 4, glass: 2, glass_thin: 1, metal: 10, wood: 5, door_wood: 5, door_metal: 10, door_glass: 2 };
+  const fspl = d => 20 * Math.log10(Math.max(d, .5)) + 46.4;
+  function crossesWall(a, b, w) {
+    const o = (p, q, r) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+    return o(a, b, w.start) !== o(a, b, w.end) && o(w.start, w.end, a) !== o(w.start, w.end, b);
+  }
+  function estimateCoverage(plan) {
+    const cat = E.catalog().products;
+    const floors = (plan.project && plan.project.floors) || [];
+    const devs = floors.flatMap((f, fi) => (f.routers || []).map(r => {
+      const m = cat.find(x => x.id === ((r.displayName || '').split(' · ')[1] || ''));
+      return { fi, pos: r.position, ptx: -67 + fspl(Math.sqrt((m ? m.area : 90) / Math.PI)) };
+    }));
+    let all = { strong: 0, ok: 0, weak: 0, n: 0 };
+    const perFloor = floors.map((f, fi) => {
+      const walls = f.walls || [], pts = walls.flatMap(w => [w.start, w.end]);
+      if (!pts.length || !devs.length) return null;
+      const xs = pts.map(q => q.x), ys = pts.map(q => q.y), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      const nx = 36, ny = Math.max(10, Math.round(nx * (y1 - y0) / Math.max(1, x1 - x0)));
+      const c = { strong: 0, ok: 0, weak: 0, n: 0 };
+      for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+        const p = { x: x0 + (x1 - x0) * (i + .5) / nx, y: y0 + (y1 - y0) * (j + .5) / ny };
+        let best = -200;
+        for (const d of devs) {
+          const dz = Math.abs(d.fi - fi) * 2.7, dist = Math.hypot((p.x - d.pos.x) / 100, (p.y - d.pos.y) / 100, dz);
+          const wallLoss = walls.reduce((s, w) => s + (crossesWall(d.pos, p, w) ? (WALL_LOSS[w.type] ?? 5) : 0), 0);
+          best = Math.max(best, d.ptx - fspl(dist) - wallLoss - 15 * Math.abs(d.fi - fi));
+        }
+        c[best >= -67 ? 'strong' : best >= -77 ? 'ok' : 'weak']++; c.n++;
+      }
+      ['strong', 'ok', 'weak', 'n'].forEach(k => (all[k] += c[k]));
+      return c;
+    });
+    const pct = c => (c && c.n ? { strong: Math.round(100 * c.strong / c.n), ok: Math.round(100 * c.ok / c.n), weak: 100 - Math.round(100 * c.strong / c.n) - Math.round(100 * c.ok / c.n) } : null);
+    return { all: pct(all), floors: perFloor.map(pct) };
+  }
+  const covBar = c => c ? `<div class="cov-bar"><span class="cov-strong" style="width:${c.strong}%"></span><span class="cov-ok" style="width:${c.ok}%"></span><span class="cov-weak" style="width:${c.weak}%"></span></div><div class="cov-legend"><span><i class="cov-strong"></i>強 ${c.strong}%</span><span><i class="cov-ok"></i>中 ${c.ok}%</span><span><i class="cov-weak"></i>弱 ${c.weak}%</span></div>` : '<span class="muted">—</span>';
+
+  // ── 4_020 方案比較 ──
+  function renderCompare(el) {
+    capturePlan();
+    const plans = (state.compareIds || []).map(id => store.plans.find(x => x.id === id)).filter(Boolean).sort((a, b) => a.createdAt - b.createdAt);
+    if (plans.length < 2) { el.innerHTML = '<div class="page"><div class="card empty">請先在「我的規劃」勾選兩個方案</div></div>'; setTimeout(() => go('plans'), 900); return; }
+    const cov = plans.map(estimateCoverage);
+    const better = (vals, higher = true) => { const [a, b] = vals; if (a == null || b == null || a === b) return [false, false]; return higher ? [a > b, b > a] : [a < b, b < a]; };
+    const covBetter = better(cov.map(c => c.all && c.all.strong));
+    const unitsBetter = better(plans.map(p => p.units), false);
+    const floorsN = Math.max(...plans.map(p => p.project.floors.length));
+    const area = p => (p.prefs.areaUnit === 'ping' ? (p.prefs.area / PING).toFixed(0) + ' 坪' : Math.round(p.prefs.area) + ' m²');
+    const row = (label, cells, cls = '') => `<div class="cmp-row ${cls}"><div class="cmp-label">${label}</div>${cells.map(c => `<div class="cmp-cell">${c}</div>`).join('')}</div>`;
+    const tagBetter = (on, text = '較佳') => (on ? ` <span class="tag tag-better">${text}</span>` : '');
+    el.innerHTML = `<div class="page">
+      <button class="link-btn" id="back">‹ 我的規劃</button>
+      <div class="res-head" style="margin-top:12px"><div><div class="eyebrow">方案比較</div><h1 class="page-title" style="margin-top:6px">${esc(plans[0].name)} vs ${esc(plans[1].name)}</h1></div></div>
+      <div class="cmp">
+        ${row('', plans.map(p => `<div class="cmp-head"><span class="plan-name">${esc(p.name)}</span><button class="btn btn-sm" data-open="${p.id}">開啟</button></div>`), 'cmp-sticky')}
+        ${Array.from({ length: floorsN }, (_, fi) => row(`${fi + 1}F 配置`, plans.map((p, k) => p.project.floors[fi] ? `<div class="cmp-thumb">${planThumb(p, fi)}</div>${covBar(cov[k].floors[fi])}` : '<span class="muted">無此樓層</span>'))).join('')}
+        ${row('整體訊號（估算）', plans.map((p, k) => covBar(cov[k].all) + tagBetter(covBetter[k], '覆蓋較佳')))}
+        ${row('配置套組', plans.map(p => esc(p.label)))}
+        ${row('總台數', plans.map((p, k) => `<b class="cmp-big">${p.units}</b> 台${tagBetter(unitsBetter[k], '台數較少')}`))}
+        ${row('每層台數', plans.map(p => p.project.floors.map(f => `${f.name} ${(f.routers || []).length} 台`).join(' · ')))}
+        ${row('主要用途', plans.map(p => esc(p.prefs.p.map(i => E.primaryNames[i] + (i === p.prefs.top && p.prefs.p.length > 1 ? '★' : '')).join('、'))))}
+        ${row('在意的功能', plans.map(p => esc(p.prefs.s.map(i => E.secondaryNames[i]).join('、') || '—')))}
+        ${row('面積／樓層', plans.map(p => `${area(p)} · ${p.prefs.floors} 層`))}
+        ${row('最後更新', plans.map(p => fmtTime(p.updatedAt)))}
+      </div>
+      <p class="note">訊號為依牆體材質、樓層與機種覆蓋能力的簡易估算，用來比較方案；實際請開啟方案查看熱圖。</p>
+    </div>`;
+    $('back').onclick = () => go('plans');
+    el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
+  }
+
   // ── 4_010 我的規劃 ──
   function renderPlans(el) {
     capturePlan();
     const list = store.plans;
+    const picks = (state.compareIds || []).filter(id => list.some(x => x.id === id));
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
-        <p class="page-sub">${list.length ? `${list.length} 個方案 · 每個方案各自保存偏好、套組與擺放位置` : '還沒有方案。完成推薦並進入居家配置後，會自動存成方案。'}</p></div></div>
+        <p class="page-sub">${list.length ? `${list.length} 個方案 · 每個方案各自保存偏好、套組與擺放位置${list.length > 1 ? '；勾選兩個方案可以比較' : ''}` : '還沒有方案。完成推薦並進入居家配置後，會自動存成方案。'}</p></div></div>
       ${list.length ? `<div class="plan-grid">${list.map(pl => `<div class="plan-card${pl.id === store.activeId ? ' current' : ''}" data-id="${pl.id}">
-          <div class="plan-thumb">${planThumb(pl)}${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
+          <div class="plan-thumb">${planThumb(pl)}${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}${list.length > 1 ? `<label class="plan-pick"><input type="checkbox" data-pick="${pl.id}" ${picks.includes(pl.id) ? 'checked' : ''}>比較</label>` : ''}</div>
           <div class="plan-body">
             <div class="plan-name-row"><span class="plan-name">${esc(pl.name)}</span><button class="plan-icon" data-rename="${pl.id}" title="改名" aria-label="改名">✎</button></div>
             <div class="plan-meta">${esc(pl.label)}</div>
@@ -520,7 +597,15 @@
           </div></div>`).join('')}
         <button class="plan-card plan-new" id="newPlan"><span class="plan-new-plus">＋</span><span class="quick-title">新增方案</span><span class="quick-sub">複製目前方案的格局，換偏好或套組比較效果</span></button>
       </div>` : `<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`}
+      ${list.length > 1 ? `<div class="cmp-dock${picks.length ? ' show' : ''}"><span>已選 <b>${picks.length}</b> / 2 個方案</span><button class="link-btn" id="clearPick">清除</button><button class="btn btn-sm" id="doCompare" ${picks.length === 2 ? '' : 'disabled'}>比較</button></div>` : ''}
     </div>`;
+    el.querySelectorAll('[data-pick]').forEach(cb => (cb.onchange = () => {
+      let ids = picks.filter(id => id !== cb.dataset.pick);
+      if (cb.checked) ids = [...ids, cb.dataset.pick].slice(-2);
+      state.compareIds = ids; save(); render();
+    }));
+    if ($('clearPick')) $('clearPick').onclick = () => { state.compareIds = []; save(); render(); };
+    if ($('doCompare')) $('doCompare').onclick = () => go('compare');
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
     el.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => startNewPlan(b.dataset.copy)));
     el.querySelectorAll('[data-del]').forEach(b => (b.onclick = () => {
@@ -621,9 +706,9 @@
       floorSyncTimer = setInterval(() => { if (!document.body.contains(el.querySelector('.fp-floors'))) return clearInterval(floorSyncTimer); syncFloor(); }, 700);
     }
     const msg = [note, floorList.length ? `這組分在 ${floorList.length} 個樓層，點上方樓層切換查看` : ''].filter(Boolean);
-    msg.forEach((m, i) => setTimeout(() => toast(m), 900 + i * 2200));
+    msg.forEach((m, i) => pendingToasts.push(setTimeout(() => toast(m), 900 + i * 2200)));
   }
-  let floorSyncTimer, captureTimer;
+  let floorSyncTimer, captureTimer, pendingToasts = [];
 
   // ── Toast ──
   let toastTimer;
@@ -725,6 +810,7 @@
   function render() {
     let s = screenById[currentId()];
     if (prevScreen === 'floorplan' && s.id !== 'floorplan') capturePlan();
+    pendingToasts.forEach(clearTimeout); pendingToasts = [];
     prevScreen = s.id;
     const need = stepOf(s), max = unlocked();
     if (need > max) {
