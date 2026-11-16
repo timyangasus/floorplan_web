@@ -151,7 +151,7 @@
         return `<button class="tile${on ? ' on' : ''}" data-i="${i}"><span class="tile-check">${on ? '✓' : ''}</span><span class="tile-ico">${primaryIcons[i]}</span><span class="tile-title">${n}</span><span class="tile-sub">${primarySubs[i]}</span>${on && state.p.length > 1 ? `<span class="star${state.top === i ? ' on' : ''}" data-star="${i}">${state.top === i ? '★ 最重要' : '☆ 設為最重要'}</span>` : ''}</button>`;
       }).join('');
       $('next').disabled = !state.p.length;
-      $('topHint').innerHTML = state.p.length > 1 ? `選了 ${state.p.length} 項：推薦會以「<b>${E.primaryNames[state.top]}</b>」為主。想換的話，點其他卡片右下角的「☆ 設為最重要」。` : state.p.length ? '' : '至少選一項才能繼續。';
+      $('topHint').innerHTML = state.p.length > 1 ? `選了 ${state.p.length} 項：推薦會以「<b>${E.primaryNames[state.top]}</b>」為主。想換的話，點其他卡片上的「☆ 設為最重要」。` : state.p.length ? '' : '至少選一項才能繼續。';
       $('tiles').querySelectorAll('.tile').forEach(t => (t.onclick = e => {
         const i = +t.dataset.i;
         if (e.target.dataset.star) { state.top = i; }
