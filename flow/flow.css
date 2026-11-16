@@ -577,3 +577,13 @@ svg { display: block; }
 .rail-btn.active .rail-dot { box-shadow: 0 0 0 2px #2a7bf6; }
 .tag-new { background: linear-gradient(90deg, #ffa24c, #f5733b); color: #fff; letter-spacing: .5px; }
 .plan-card.is-new { box-shadow: 0 0 0 2px #ffb27a, var(--shadow); }
+
+/* Simple confirm dialog */
+.ask-wrap { position: fixed; inset: 0; z-index: 960; background: rgba(20, 24, 32, .35); display: grid; place-items: center; animation: ask-fade .15s ease-out; }
+.ask { width: min(360px, calc(100vw - 32px)); background: var(--card); border-radius: 16px; padding: 22px 22px 18px; box-shadow: 0 20px 50px rgba(0, 0, 0, .25); }
+.ask-title { font-size: 17px; font-weight: 600; }
+.ask-detail { font-size: 14px; color: var(--ink-2); margin-top: 6px; }
+.ask-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.ask-danger { background: #e2604f; box-shadow: none; }
+.ask-danger:hover { box-shadow: 0 6px 16px rgba(226, 96, 79, .3); }
+@keyframes ask-fade { from { opacity: 0; } }

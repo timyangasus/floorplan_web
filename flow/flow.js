@@ -610,15 +610,18 @@
     }));
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
     el.querySelectorAll('[data-rec]').forEach(b => (b.onclick = () => openRecord(b.dataset.rec)));
-    el.querySelectorAll('[data-del]').forEach(b => (b.onclick = () => {
+    el.querySelectorAll('[data-del]').forEach(b => (b.onclick = async e => {
+      e.stopPropagation();
       const x = store.plans.find(y => y.id === b.dataset.del);
       if (!x) return;
       const n = isPlan(x) ? 0 : triedPlans(x.prefs).length;
-      if (!confirm(isPlan(x) ? `刪除「${x.name}」？刪除後無法復原。` : `刪除「${x.name}」？${n ? `底下 ${n} 個方案不會刪除，會移到「其他方案」。` : ''}`)) return;
+      const ok = await askConfirm(`刪除「${x.name}」？`, isPlan(x) ? '刪除後無法復原。' : n ? `底下 ${n} 個方案不會刪除，會移到「其他方案」。` : '刪除後無法復原。');
+      if (!ok) return;
       store.plans = store.plans.filter(y => y.id !== x.id);
       if (store.activeId === x.id) { const nxt = store.plans.find(isPlan); store.activeId = nxt ? nxt.id : null; state.loadedPlanId = null; save(); }
       if (!isPlan(x) && n) { state.openGroups = ['other']; save(); }
       savePlans(); render();
+      toast(`已刪除「${x.name}」`);
     }));
     el.querySelectorAll('[data-rename]').forEach(b => (b.onclick = () => {
       const x = store.plans.find(y => y.id === b.dataset.rename);
@@ -722,6 +725,24 @@
     msg.forEach((m, i) => pendingToasts.push(setTimeout(() => toast(m), 900 + i * 2200)));
   }
   let floorSyncTimer, captureTimer, pendingToasts = [];
+
+  // ── Simple confirm dialog ──
+  function askConfirm(title, detail, okLabel = '刪除') {
+    return new Promise(resolve => {
+      const wrap = document.createElement('div');
+      wrap.className = 'ask-wrap';
+      wrap.innerHTML = `<div class="ask" role="alertdialog" aria-modal="true"><div class="ask-title"></div><div class="ask-detail"></div><div class="ask-actions"><button class="btn btn-ghost btn-sm" data-a="0">取消</button><button class="btn btn-sm ask-danger" data-a="1"></button></div></div>`;
+      wrap.querySelector('.ask-title').textContent = title;
+      wrap.querySelector('.ask-detail').textContent = detail || '';
+      wrap.querySelector('[data-a="1"]').textContent = okLabel;
+      const done = v => { document.removeEventListener('keydown', onKey); wrap.remove(); resolve(v); };
+      const onKey = e => { if (e.key === 'Escape') done(false); if (e.key === 'Enter') done(true); };
+      wrap.onclick = e => { if (e.target === wrap) done(false); const a = e.target.closest('[data-a]'); if (a) done(a.dataset.a === '1'); };
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(wrap);
+      wrap.querySelector('[data-a="1"]').focus();
+    });
+  }
 
   // ── Toast ──
   let toastTimer;
