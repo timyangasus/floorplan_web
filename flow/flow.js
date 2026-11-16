@@ -270,8 +270,9 @@
       ${u.country !== 'TW' ? '<div class="card empty" style="margin-top:24px">此地區尚未建立價表與可推薦機種，請改選台灣。</div>' : `
       <div class="section-head"><div><h2>推薦機種排行</h2><div class="muted small">每型號一筆 · 已納入你的面積與樓層 · 點卡片看詳情</div></div></div>
       ${top4.length ? `<div class="gauges">${top4.map((m, i) => `<div class="gauge-card" data-model="${esc(m.id)}">
-        <div class="gauge-name-row"><div class="gauge-name" title="${esc(m.id)}">${esc(m.id)}</div>${rankTag(i + 1)}</div>
-        <div class="gauge-sub-row"><div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div>${m.active ? '<span class="tag tag-promo">本期主打</span>' : ''}</div>
+        <div class="gauge-head">${m.active ? '<span class="tag tag-promo">本期主打</span>' : ''}</div>
+        <div class="gauge-name-row">${rankTag(i + 1)}<div class="gauge-name" title="${esc(m.id)}">${esc(m.id)}</div></div>
+        <div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div>
         <div class="gauge-body"><div class="gauge-photo"><img src="${productImg(m.id)}" alt="${esc(m.id)}" loading="lazy" onerror="this.style.visibility='hidden'"></div>
         <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>最少 ${m.N} 台</li><li>${m.m.ai ? 'AI 核心' : '一般核心'}</li></ul></div>
         <div class="gauge-foot">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}${bundles.some(b => b.r.id === m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">在我家試擺</button>` : ''}</div></div>`).join('')}</div>
