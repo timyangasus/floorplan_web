@@ -579,7 +579,7 @@
          <span class="grp-count">${g.plans.length ? `${g.plans.length} 個方案` : '尚未試擺'}</span>
          <button class="btn btn-ghost btn-sm" data-rec="${g.rec.id}">查看推薦</button>${delBtn(g.rec)}`
       : `<div class="grp-icon grp-icon-other">${I.plans}</div>
-         <div class="grp-main"><div class="plan-name-row"><span class="plan-name">其他方案</span></div><div class="plan-meta muted">推薦紀錄已刪除的方案</div></div>
+         <div class="grp-main"><div class="plan-name-row"><span class="plan-name">其他方案</span></div></div>
          <span class="grp-count">${g.plans.length ? `${g.plans.length} 個方案` : '沒有方案'}</span>`;
     const groupBlock = g => {
       const open = state.openGroups.includes(g.key);
