@@ -5,7 +5,7 @@
 
   // ── State (per-viewer convenience only; works without storage) ──
   const STORE = 'fpw_flow_state';
-  const initial = () => ({ p: [0], top: 0, s: [], styles: [], brands: [], tiers: [], includeTravel: false, area: 100, areaUnit: 'm2', floors: 2, bh: 'wired', country: 'TW', sort: 'balanced', bundleId: null, modelId: null, seededKey: null, decisionsSeen: {}, prefsDone: false, brandOn: false, tierOn: false });
+  const initial = () => ({ p: [0], top: 0, s: [], styles: [], brands: [], tiers: [], includeTravel: false, area: 30 * 3.3058, areaUnit: 'ping', floors: 2, bh: 'wired', country: 'TW', sort: 'balanced', bundleId: null, modelId: null, seededKey: null, decisionsSeen: {}, prefsDone: false, brandOn: false, tierOn: false });
   let state = initial();
   try { Object.assign(state, JSON.parse(localStorage.getItem(STORE)) || {}); } catch (e) { /* ignore */ }
   state.brands = (state.brands || []).filter(b => ['ASUS', 'ROG', 'TUF'].includes(b));
