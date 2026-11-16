@@ -338,6 +338,8 @@
   }
 
   // ── 2_030 Exit ──
+  // Temporary destination until per-model product URLs are available.
+  const ASUS_STORE = 'https://www.asus.com/tw/store/networking-iot-servers/';
   function renderExit(el) {
     const { bundles, models } = results();
     const buy = state.buy || {};
@@ -350,6 +352,7 @@
       <h1 class="page-title">前往 ASUS 購買頁面</h1>
       <p class="page-sub">示意：此處實際會開啟官網商品頁或經銷通路。</p>
       ${items.length ? `<div class="buy-items">${items.map(([id, qty]) => `<div class="buy-item"><img src="${productImg(id)}" alt="" onerror="this.style.visibility='hidden'"><span>${esc(id)}</span><b>× ${qty}</b></div>`).join('')}</div>` : ''}
+      <a class="btn exit-store" href="${ASUS_STORE}" target="_blank" rel="noopener">${I.cart.replace('<svg', '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"')}前往 ASUS 線上購物</a>
       <p class="exit-try">買之前想先看看家裡怎麼擺？<button class="link-btn" id="plan" ${planBundle ? '' : 'disabled'}>在我家試擺 ›</button></p>
       <button class="link-btn" id="back" style="margin-top:28px">‹ 回推薦結果</button>
     </div></div>`;
