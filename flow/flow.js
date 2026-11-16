@@ -69,7 +69,7 @@
     { id: 'needs', code: '1_010', rail: 'prefs', description: '偏好 1/3：主要用途（可複選，標記最重要的一項）', render: renderNeeds },
     { id: 'care', code: '1_020', rail: 'prefs', description: '偏好 2/3：還在意什麼、外觀、品牌與產品定位', render: renderCare },
     { id: 'home-size', code: '1_030', rail: 'prefs', description: '偏好 3/3：我家的樣子（面積、樓層、回程、地區）', render: renderHomeSize },
-    { id: 'results', code: '2_010', rail: 'rank', description: '推薦結果：機種排行＋配置套組 Top 10。兩條路：在我家試擺（約 70%）／購物車前往購買（約 30%）', render: renderResults },
+    { id: 'results', code: '2_010', rail: 'rank', description: '推薦結果：機種排行＋配置套組 Top 10，看到即完成；可在我家試擺（約 70%）或購物車前往購買（約 30%）', render: renderResults },
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
     { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；換套組會另存新方案，可新增方案複製格局', render: renderFloorplan },
@@ -78,15 +78,8 @@
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
 
   // ── Demo decisions ──
-  const DECISIONS = {
-    next: {
-      index: 0, label: '分流', title: '看完推薦後，使用者下一步？',
-      options: [
-        { value: 'exit', label: '只想知道買什麼，看完就離開（約 30%）', short: '離開', to: 'exit' },
-        { value: 'plan', label: '想看家裡怎麼配置，進入 Floor plan（約 70%）', short: 'Floor plan', to: 'floorplan' },
-      ],
-    },
-  };
+  // Demo branch decisions (none at the moment: the results page offers both paths itself).
+  const DECISIONS = {};
   let decisions = [];
 
   function go(id) { location.hash = id; }
@@ -307,7 +300,6 @@
     el.querySelectorAll('[data-buy-bundle]').forEach(b => (b.onclick = () => { setBuy('bundle', bundleKey(bundles[+b.dataset.buyBundle])); go('exit'); }));
     const cta = $('cta');
     if (cta) cta.onclick = () => { pickBundle(bundles[0]); go('floorplan'); };
-    if (bundles.length && !state.decisionsSeen.next) { state.decisionsSeen.next = true; save(); setTimeout(() => openDecision('next'), 600); }
   }
 
   function pickBundle(b) { if (b) { state.bundleId = bundleKey(b); save(); } }
