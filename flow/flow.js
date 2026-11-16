@@ -347,13 +347,11 @@
     const planBundle = bundle || (model && bundles.find(x => x.r.id === model)) || bundles[0];
     el.innerHTML = `<div class="page"><div class="exit-wrap">
       <div class="exit-ico">${I.cart}</div>
-      <h1 class="page-title">已前往 ASUS 購買頁面</h1>
-      <p class="page-sub">示意：此處實際會開啟官網商品頁或經銷通路。約 30% 的使用者在這裡完成流程。</p>
+      <h1 class="page-title">前往 ASUS 購買頁面</h1>
+      <p class="page-sub">示意：此處實際會開啟官網商品頁或經銷通路。</p>
       ${items.length ? `<div class="buy-items">${items.map(([id, qty]) => `<div class="buy-item"><img src="${productImg(id)}" alt="" onerror="this.style.visibility='hidden'"><span>${esc(id)}</span><b>× ${qty}</b></div>`).join('')}</div>` : ''}
-      <div class="card" style="margin-top:30px;text-align:left;display:flex;gap:18px;align-items:center;flex-wrap:wrap">
-        <span class="quick-ico">${I.plan}</span><div style="flex:1;min-width:200px"><div class="quick-title">買之前，想先看看家裡怎麼擺？</div><div class="quick-sub">把${bundle || model ? '這組' : '推薦套組'}放進平面圖，確認每個房間都收得到。</div></div>
-        <button class="btn btn-sm" id="plan" ${planBundle ? '' : 'disabled'}>在我家試擺</button></div>
-      <button class="link-btn" id="back" style="margin-top:22px">‹ 回推薦結果</button>
+      <p class="exit-try">買之前想先看看家裡怎麼擺？<button class="link-btn" id="plan" ${planBundle ? '' : 'disabled'}>在我家試擺 ›</button></p>
+      <button class="link-btn" id="back" style="margin-top:28px">‹ 回推薦結果</button>
     </div></div>`;
     $('plan').onclick = () => { pickBundle(planBundle); go('floorplan'); };
     $('back').onclick = () => go('results');
