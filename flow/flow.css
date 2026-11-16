@@ -520,6 +520,9 @@ svg { display: block; }
 }
 
 /* ── 我的規劃 ── */
+.pending-card { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 22px; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 22px; border-left: 4px solid #f5853b; }
+.pending-body { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 2px; }
+.pending-title { font-size: 17px; display: flex; align-items: center; gap: 8px; }
 .plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 26px; }
 .plan-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; text-align: left; border: 2px solid transparent; }
 .plan-card.current { border-color: var(--accent); }

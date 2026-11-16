@@ -65,7 +65,7 @@
 
   // ── Screens ──
   const SCREENS = [
-    { id: 'home', code: '0_010', rail: 'home', description: '首頁：大字標題＋「開始規劃」主按鈕（有進度時下方可繼續），下方為功能 banner', render: renderHome },
+    { id: 'home', code: '0_010', rail: 'home', description: '首頁：大字標題＋「開始規劃」主按鈕，下方為功能 banner（未完成的進度在「我的規劃」）', render: renderHome },
     { id: 'needs', code: '1_010', rail: 'prefs', description: '偏好 1/3：主要用途（可複選，標記最重要的一項）', render: renderNeeds },
     { id: 'care', code: '1_020', rail: 'prefs', description: '偏好 2/3：還在意什麼、外觀、品牌與產品定位', render: renderCare },
     { id: 'home-size', code: '1_030', rail: 'prefs', description: '偏好 3/3：我家的樣子（面積、樓層、回程、地區）', render: renderHomeSize },
@@ -73,7 +73,7 @@
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
     { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；換套組會另存新方案，可新增方案複製格局', render: renderFloorplan },
-    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：我的家底下的所有方案（各自保存偏好、套組、擺放位置），可開啟、改名、刪除、複製格局新增方案', render: renderPlans },
+    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：未完成的規劃（可繼續或捨棄）＋我的家底下的所有方案，可開啟、改名、刪除、複製格局新增方案', render: renderPlans },
   ];
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
 
@@ -105,8 +105,6 @@
 
   // ── 0_010 Home ──
   function renderHome(el) {
-    const max = unlocked();
-    const resume = state.prefsDone ? FLOW[max] : null;
     el.innerHTML = `<div class="page">
       <section class="hero">
         <h1 class="hero-title">嗨，<br>來規劃你家的 WiFi</h1>
@@ -115,13 +113,11 @@
           <div>放進你家的平面圖 <span class="muted">· 模擬每個房間的訊號覆蓋</span></div>
         </div>
         <div class="hero-cta"><button class="btn btn-xl" id="start">開始規劃 <span class="btn-arrow">→</span></button><span class="muted">約 3 分鐘 · 免登入</span></div>
-        ${resume ? `<div class="resume"><span class="quick-ico">${resume.key === 'plan' ? I.plan : I.rank}</span><div><div class="quick-title">繼續上次進度</div><div class="quick-sub">已完成偏好設定${state.bundleId ? '，並選了配置套組' : ''}</div></div><button class="btn btn-ghost btn-sm" id="resume">前往${resume.label}</button></div>` : ''}
       </section>
       <div class="home-strip"><div><div class="eyebrow">能幫你做什麼</div><h2 class="promo-heading">從挑機種到擺位置，一次搞定</h2></div></div>
       ${promoBanners()}
     </div>`;
     $('start').onclick = () => go('needs');
-    if (resume) $('resume').onclick = () => go(resume.to);
     el.querySelectorAll('[data-promo]').forEach(b => (b.onclick = () => go('needs')));
   }
 
@@ -504,9 +500,22 @@
   function renderPlans(el) {
     capturePlan();
     const list = store.plans;
+    // Work in progress that is not saved as a plan yet (prefs done, plan not created / changed).
+    const cur = activePlan();
+    const pending = state.prefsDone && state.seededKey !== 'blank' && (state.newPlanFrom || !cur || cur.bundleId !== state.bundleId || JSON.stringify(cur.prefs) !== JSON.stringify(prefsOf()));
+    const next = FLOW[unlocked()];
+    const src = state.newPlanFrom && store.plans.find(x => x.id === state.newPlanFrom);
+    const pendingCard = pending ? `<div class="pending-card">
+        <span class="quick-ico">${next.key === 'plan' ? I.plan : I.rank}</span>
+        <div class="pending-body"><div class="pending-title">未完成的規劃 <span class="tag tag-rank">未完成</span></div>
+          <div class="quick-sub">${state.bundleId ? '已選配置套組，尚未進入居家配置' : '已完成偏好設定，尚未選配置套組'}${src ? `　·　沿用「${esc(src.name)}」的格局` : ''}</div>
+          <div class="quick-sub">${esc(state.p.map(i => E.primaryNames[i]).join('、'))} · ${areaText(state.area)} · ${state.floors} 層</div></div>
+        <button class="link-btn" id="dropPending">捨棄</button><button class="btn btn-sm" id="resumePending">繼續：${next.label}</button>
+      </div>` : '';
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
         <p class="page-sub">${list.length ? `${list.length} 個方案 · 每個方案各自保存偏好、套組與擺放位置` : '還沒有方案。完成推薦並進入居家配置後，會自動存成方案。'}</p></div></div>
+      ${pendingCard}
       ${list.length ? `<div class="plan-grid">${list.map(pl => `<div class="plan-card${pl.id === store.activeId ? ' current' : ''}" data-id="${pl.id}">
           <div class="plan-thumb">${planThumb(pl)}${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
           <div class="plan-body">
@@ -519,6 +528,13 @@
       </div>` : `<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`}
     </div>`;
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
+    if ($('resumePending')) $('resumePending').onclick = () => go(next.to);
+    if ($('dropPending')) $('dropPending').onclick = () => {
+      if (!confirm('捨棄這個未完成的規劃？')) return;
+      if (cur) { Object.assign(state, JSON.parse(JSON.stringify(cur.prefs))); state.bundleId = cur.bundleId; }
+      else { state.prefsDone = false; state.bundleId = null; }
+      state.newPlanFrom = null; save(); render();
+    };
     el.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => startNewPlan(b.dataset.copy)));
     el.querySelectorAll('[data-del]').forEach(b => (b.onclick = () => {
       const pl = store.plans.find(x => x.id === b.dataset.del);
