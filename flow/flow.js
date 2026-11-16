@@ -491,7 +491,9 @@
     const { project, rebuilt } = placeOnLayout(b, u, layout);
     store.seq += 1;
     const plan = { id: 'pl_' + Date.now(), name: '方案 ' + store.seq, createdAt: Date.now(), updatedAt: Date.now(), prefs: prefsOf(), bundleId: bundleKey(b), label: bundleLabel(b), units: b.N, project };
+    if (!store.plans.some(x => x.kind === 'rec' && samePrefs(x.prefs, plan.prefs))) { const r = results(); recordRecommendation(r.models, r.bundles); }
     store.plans.unshift(plan); store.activeId = plan.id;
+    delete state.openGroups; // 我的規劃 opens the group holding this plan next time
     savePlans();
     return { plan, rebuilt };
   }
@@ -532,11 +534,20 @@
   }
 
   // ── 4_010 我的規劃 ──
+  // Grouped by 推薦紀錄: each record expands to the plans tried from it. Records and plans are
+  // deleted independently; plans whose record was deleted are gathered under 其他方案.
   function renderPlans(el) {
     capturePlan();
-    const list = store.plans.slice().sort((x, y) => y.updatedAt - x.updatedAt);
-    const plansOnly = list.filter(isPlan), recs = list.filter(x => !isPlan(x));
-    // Unfinished = the questionnaire was started but its results have not been viewed yet.
+    const recs = store.plans.filter(x => !isPlan(x)).sort((x, y) => y.updatedAt - x.updatedAt);
+    const plansOnly = store.plans.filter(isPlan);
+    const groups = recs.map(rc => ({ key: rc.id, rec: rc, plans: triedPlans(rc.prefs).sort((x, y) => y.updatedAt - x.updatedAt) }));
+    const orphans = plansOnly.filter(p => !recOf(p)).sort((x, y) => y.updatedAt - x.updatedAt);
+    if (orphans.length) groups.push({ key: 'other', rec: null, plans: orphans });
+    // Open groups: remembered per viewer; by default the group holding the open plan (or the first).
+    if (!Array.isArray(state.openGroups)) {
+      const cur = activePlan(), g = groups.find(x => cur && x.plans.includes(cur)) || groups[0];
+      state.openGroups = g ? [g.key] : [];
+    }
     const pending = state.inProgress && state.seededKey !== 'blank';
     const src = state.newPlanFrom && store.plans.find(x => x.id === state.newPlanFrom);
     const pendingCard = pending ? `<div class="pending-card">
@@ -547,35 +558,51 @@
         <button class="link-btn" id="dropPending">捨棄</button><button class="btn btn-sm" id="resumePending">繼續填寫</button>
       </div>` : '';
     const areaOf = pr => (pr.areaUnit === 'ping' ? (pr.area / PING).toFixed(0) + ' 坪' : Math.round(pr.area) + ' m²');
-    const nameRow = pl => `<div class="plan-name-row"><span class="plan-name">${esc(pl.name)}</span><button class="plan-icon" data-rename="${pl.id}" title="改名" aria-label="改名">✎</button></div>`;
-    const delBtn = pl => `<button class="plan-icon plan-del" data-del="${pl.id}" title="刪除" aria-label="刪除">🗑</button>`;
+    const renameBtn = x => `<button class="plan-icon" data-rename="${x.id}" title="改名" aria-label="改名">✎</button>`;
+    const delBtn = x => `<button class="plan-icon plan-del" data-del="${x.id}" title="刪除" aria-label="刪除">🗑</button>`;
     const planCard = pl => `<div class="plan-card${pl.id === store.activeId ? ' current' : ''}">
-        <div class="plan-thumb">${planThumb(pl)}<span class="tag tag-kind-plan plan-kind">居家配置</span>${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
-        <div class="plan-body">${nameRow(pl)}
+        <div class="plan-thumb">${planThumb(pl)}${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
+        <div class="plan-body">
+          <div class="plan-name-row"><span class="plan-name">${esc(pl.name)}</span>${renameBtn(pl)}</div>
           <div class="plan-meta">${esc(pl.label)}</div>
-          ${(() => { const rc = recOf(pl); return rc ? `<div class="plan-meta"><button class="plan-from" data-rec="${rc.id}">來自 ${esc(rc.name)}</button></div>` : ''; })()}
           <div class="plan-meta muted">共 ${pl.units} 台 · ${areaOf(pl.prefs)} · ${pl.prefs.floors} 層 · ${fmtTime(pl.updatedAt)}</div>
           <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button><button class="try-link" data-copy="${pl.id}">複製格局新增方案</button>${delBtn(pl)}</div>
         </div></div>`;
-    const recCard = rc => `<div class="plan-card">
-        <div class="plan-thumb rec-thumb">${rc.top && rc.top[0] ? `<img src="${productImg(rc.top[0])}" alt="${esc(rc.top[0])}" onerror="this.style.visibility='hidden'">` : ''}<span class="tag tag-kind-rec plan-kind">推薦紀錄</span></div>
-        <div class="plan-body">${nameRow(rc)}
-          <div class="plan-meta">${esc((rc.top || [])[0] || '')}</div>
-          <div class="plan-meta muted">${esc(rc.prefs.p.map(i => E.primaryNames[i]).join('、'))} · ${areaOf(rc.prefs)} · ${rc.prefs.floors} 層 · ${fmtTime(rc.updatedAt)}</div>
-          ${(() => { const tp = triedPlans(rc.prefs); return tp.length ? `<div class="rec-tried"><span>已試擺 ${tp.length} 組</span>${tp.map(x => `<button class="rec-tried-chip" data-open="${x.id}">${esc(x.name)}</button>`).join('')}</div>` : ''; })()}
-          <div class="plan-actions"><button class="btn btn-sm" data-rec="${rc.id}">查看推薦</button>${delBtn(rc)}</div>
-        </div></div>`;
-    const counts = [plansOnly.length ? `${plansOnly.length} 個方案` : '', recs.length ? `${recs.length} 筆推薦紀錄` : ''].filter(Boolean).join(' · ');
+    const groupHead = g => g.rec
+      ? `<div class="grp-icon">${g.rec.top && g.rec.top[0] ? `<img src="${productImg(g.rec.top[0])}" alt="" onerror="this.style.visibility='hidden'">` : ''}</div>
+         <div class="grp-main">
+           <div class="plan-name-row"><span class="tag tag-kind-rec">推薦紀錄</span><span class="plan-name">${esc(g.rec.name)}</span>${renameBtn(g.rec)}</div>
+           <div class="plan-meta">${esc((g.rec.top || [])[0] || '')}　<span class="muted">${esc(g.rec.prefs.p.map(i => E.primaryNames[i]).join('、'))} · ${areaOf(g.rec.prefs)} · ${g.rec.prefs.floors} 層 · ${fmtTime(g.rec.updatedAt)}</span></div>
+         </div>
+         <span class="grp-count">${g.plans.length ? `${g.plans.length} 個方案` : '尚未試擺'}</span>
+         <button class="btn btn-ghost btn-sm" data-rec="${g.rec.id}">查看推薦</button>${delBtn(g.rec)}`
+      : `<div class="grp-icon grp-icon-other">${I.plans}</div>
+         <div class="grp-main"><div class="plan-name-row"><span class="plan-name">其他方案</span></div><div class="plan-meta muted">推薦紀錄已刪除的方案</div></div>
+         <span class="grp-count">${g.plans.length} 個方案</span>`;
+    const groupBlock = g => {
+      const open = state.openGroups.includes(g.key);
+      return `<section class="grp${open ? ' open' : ''}${g.rec ? '' : ' grp-other'}">
+        <div class="grp-head" data-toggle="${g.key}"><span class="grp-chev">›</span>${groupHead(g)}</div>
+        ${open ? `<div class="grp-body">${g.plans.length ? `<div class="plan-grid">${g.plans.map(planCard).join('')}</div>` : '<p class="muted small grp-empty">還沒有從這筆推薦試擺的方案。按「查看推薦」，在推薦結果選一組「在我家試擺」。</p>'}</div>` : ''}
+      </section>`;
+    };
+    const counts = [recs.length ? `${recs.length} 筆推薦紀錄` : '', plansOnly.length ? `${plansOnly.length} 個方案` : ''].filter(Boolean).join(' · ');
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
-        <p class="page-sub">${list.length ? counts : '還沒有紀錄。看完推薦結果或進入居家配置後，會自動存在這裡。'}</p></div></div>
+        <p class="page-sub">${groups.length ? counts + '；點推薦紀錄展開從它試擺的方案' : '還沒有紀錄。看完推薦結果或進入居家配置後，會自動存在這裡。'}</p></div>
+        ${plansOnly.length ? '<button class="btn btn-ghost btn-sm" id="newPlan">＋ 新增方案</button>' : ''}</div>
       ${pendingCard}
-      ${list.length ? `<div class="plan-grid">${list.map(x => (isPlan(x) ? planCard(x) : recCard(x))).join('')}
-        ${plansOnly.length ? '<button class="plan-card plan-new" id="newPlan"><span class="plan-new-plus">＋</span><span class="quick-title">新增方案</span><span class="quick-sub">複製目前方案的格局，試試不同的偏好或套組</span></button>' : ''}
-      </div>` : (pending ? '' : `<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
+      ${groups.length ? `<div class="grp-list">${groups.map(groupBlock).join('')}</div>` : (pending ? '' : `<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
     </div>`;
+    el.querySelectorAll('[data-toggle]').forEach(h => (h.onclick = e => {
+      if (e.target.closest('button, input')) return;
+      const k = h.dataset.toggle;
+      state.openGroups = state.openGroups.includes(k) ? state.openGroups.filter(x => x !== k) : [...state.openGroups, k];
+      save(); render();
+    }));
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
-    el.querySelectorAll('[data-rec]').forEach(b => (b.onclick = () => openRecord(b.dataset.rec, false)));
+    el.querySelectorAll('[data-rec]').forEach(b => (b.onclick = () => openRecord(b.dataset.rec)));
+    el.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => startNewPlan(b.dataset.copy)));
     if ($('resumePending')) $('resumePending').onclick = () => go('needs');
     if ($('dropPending')) $('dropPending').onclick = () => {
       if (!confirm('捨棄這個未完成的規劃？')) return;
@@ -584,21 +611,24 @@
       else { state.prefsDone = false; state.bundleId = null; }
       state.newPlanFrom = null; state.inProgress = false; save(); render();
     };
-    el.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => startNewPlan(b.dataset.copy)));
     el.querySelectorAll('[data-del]').forEach(b => (b.onclick = () => {
-      const pl = store.plans.find(x => x.id === b.dataset.del);
-      if (!pl || !confirm(`刪除「${pl.name}」？刪除後無法復原。`)) return;
-      store.plans = store.plans.filter(x => x.id !== pl.id);
-      if (store.activeId === pl.id) { const nxt = store.plans.find(isPlan); store.activeId = nxt ? nxt.id : null; state.loadedPlanId = null; save(); }
+      const x = store.plans.find(y => y.id === b.dataset.del);
+      if (!x) return;
+      const n = isPlan(x) ? 0 : triedPlans(x.prefs).length;
+      if (!confirm(isPlan(x) ? `刪除「${x.name}」？刪除後無法復原。` : `刪除「${x.name}」？${n ? `底下 ${n} 個方案不會刪除，會移到「其他方案」。` : ''}`)) return;
+      store.plans = store.plans.filter(y => y.id !== x.id);
+      if (store.activeId === x.id) { const nxt = store.plans.find(isPlan); store.activeId = nxt ? nxt.id : null; state.loadedPlanId = null; save(); }
+      if (!isPlan(x) && n && !state.openGroups.includes('other')) { state.openGroups = [...state.openGroups, 'other']; save(); }
       savePlans(); render();
     }));
     el.querySelectorAll('[data-rename]').forEach(b => (b.onclick = () => {
-      const pl = store.plans.find(x => x.id === b.dataset.rename);
+      const x = store.plans.find(y => y.id === b.dataset.rename);
       const span = b.parentElement.querySelector('.plan-name');
       const input = document.createElement('input');
-      input.className = 'plan-name-input'; input.value = pl.name; input.maxLength = 30;
+      input.className = 'plan-name-input'; input.value = x.name; input.maxLength = 30;
       span.replaceWith(input); b.hidden = true; input.focus(); input.select();
-      const done = ok => { if (ok && input.value.trim()) { pl.name = input.value.trim(); savePlans(); } render(); };
+      input.onclick = e => e.stopPropagation();
+      const done = ok => { if (ok && input.value.trim()) { x.name = input.value.trim(); savePlans(); } render(); };
       input.onkeydown = e => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); };
       input.onblur = () => done(true);
     }));
