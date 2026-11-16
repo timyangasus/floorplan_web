@@ -586,7 +586,7 @@
            <div class="plan-name-row"><span class="tag tag-kind-rec">推薦紀錄</span>${isNew(g.rec) || g.plans.some(isNew) ? newTag : ''}<span class="plan-name">${esc(g.rec.name)}</span>${renameBtn(g.rec)}</div>
            <div class="plan-meta">${esc((g.rec.top || [])[0] || '')}　<span class="muted">${esc(g.rec.prefs.p.map(i => E.primaryNames[i]).join('、'))} · ${areaOf(g.rec.prefs)} · ${g.rec.prefs.floors} 層</span></div>
          </div>
-         <span class="grp-count">${g.plans.length ? `${g.plans.length} 個方案` : '尚未試擺'}</span>
+         ${g.plans.length ? `<span class="grp-count">${g.plans.length} 個方案</span>` : ''}
          <button class="btn btn-ghost btn-sm" data-rec="${g.rec.id}">查看推薦</button>${delBtn(g.rec)}${created(g.rec)}`
       : `<div class="grp-icon grp-icon-other">${I.plans}</div>
          <div class="grp-main"><div class="plan-name-row"><span class="plan-name">其他方案</span>${g.plans.some(isNew) ? newTag : ''}</div></div>
