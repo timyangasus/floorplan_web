@@ -576,7 +576,7 @@
         <div class="plan-thumb">${planThumb(pl)}</div>
         <div class="plan-body">
           <div class="plan-name-row">${isNew(pl) ? newTag : ''}<span class="plan-name">${esc(pl.name)}</span>${renameBtn(pl)}${created(pl, 'plan-time-inline')}</div>
-          <div class="plan-meta">${esc(pl.label)}</div>
+          <div class="plan-meta plan-devices">${esc(pl.label)}</div>
           <div class="plan-meta muted">共 ${pl.units} 台 · ${areaOf(pl.prefs)} · ${pl.prefs.floors} 層</div>
           <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button>${delBtn(pl)}</div>
         </div></div>`;

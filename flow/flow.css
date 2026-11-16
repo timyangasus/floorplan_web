@@ -535,6 +535,7 @@ svg { display: block; }
 .plan-icon { width: 28px; height: 28px; border-radius: 8px; color: var(--ink-3); display: inline-grid; place-items: center; font-size: 14px; }
 .plan-icon:hover { background: var(--panel); color: var(--ink); }
 .plan-meta { font-size: 13px; color: var(--ink-2); }
+.plan-devices { font-size: 14px; font-weight: 600; color: var(--ink); }
 .plan-time { position: absolute; top: 16px; right: 22px; font-size: 13px; font-weight: 600; line-height: 1.4; color: #4a4f57; white-space: nowrap; }
 .plan-time.plan-time-inline { position: static; margin-left: auto; }
 .grp:not(.grp-other) .grp-head { position: relative; padding-top: 44px; }
