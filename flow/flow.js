@@ -186,8 +186,8 @@
       $('sec').innerHTML = items.map(it => `<button class="chip${it.on() ? ' on' : ''}" data-k="${it.key}">${it.on() ? '✓ ' : ''}${it.label}</button>`).join('');
       const panels = [];
       if (state.s.includes(4)) panels.push(`<div class="subopt" data-p="style"><span class="subopt-label">外觀偏好</span><div class="chips">${opt('style', 'quiet', '低調內置天線', state.style === 'quiet')}${opt('style', 'rgb', 'RGB 燈效', state.style === 'rgb')}</div></div>`);
-      if (state.brandOn) panels.push(`<div class="subopt" data-p="brand"><span class="subopt-label">品牌／系列</span><div class="chips">${['ASUS', 'ROG', 'TUF'].map(v => opt('brand', v, v, state.brands.includes(v))).join('')}</div><span class="subopt-hint">${!state.brands.length || state.brands.length === 3 ? '不限品牌' : '只看 ' + state.brands.join('、')}</span></div>`);
-      if (state.tierOn) panels.push(`<div class="subopt" data-p="tier"><span class="subopt-label">產品定位</span><div class="chips">${['入門', '中階', '高階'].map(v => opt('tier', v, E.tierNames[v], state.tiers.includes(v), E.tierDescriptions[v])).join('')}</div><span class="subopt-hint">${!state.tiers.length || state.tiers.length === 3 ? '不限定位' : ''}</span></div>`);
+      if (state.brandOn) panels.push(`<div class="subopt" data-p="brand"><span class="subopt-label">品牌／系列</span><div class="chips">${['ASUS', 'ROG', 'TUF'].map(v => opt('brand', v, v, state.brands.includes(v))).join('')}</div><span class="subopt-hint">${state.brands.length && state.brands.length < 3 ? '只看 ' + state.brands.join('、') : ''}</span></div>`);
+      if (state.tierOn) panels.push(`<div class="subopt" data-p="tier"><span class="subopt-label">產品定位</span><div class="chips">${['入門', '中階', '高階'].map(v => opt('tier', v, E.tierNames[v], state.tiers.includes(v), E.tierDescriptions[v])).join('')}</div></div>`);
       $('subopts').innerHTML = panels.join('');
       $('subopts').querySelectorAll('[data-p]').forEach(p => p.classList.toggle('still', shown.has(p.dataset.p)));
       shown = new Set([...$('subopts').querySelectorAll('[data-p]')].map(p => p.dataset.p));
