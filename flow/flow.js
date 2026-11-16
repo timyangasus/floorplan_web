@@ -54,6 +54,9 @@
   const fpModel = id => FP_MODEL[id] || 'BT8';
   // Product icons: same ASUS CDN the floor plan app already uses.
   const PRODUCT_IMG = { 'BT8': 'ZenWiFi_BT8', 'GT-BE98': 'GT-BE98', 'GT-BE19000AI': 'GT-BE19000AI', 'TUF-AX6000': 'TUF-AX6000', 'RT-AX86U Pro': 'RT-AX86U_Pro', 'PRT-BE5000': 'PRT-BE5000', 'RT-BE58 Go': 'RT-BE58_Go', 'RT-AX57 Go': 'RT-AX57_Go', 'BD4 Outdoor': 'ZenWiFi_BD4_Outdoor', 'BD5 Outdoor': 'ZenWiFi_BD5_Outdoor' };
+  // Buy entry: cart icon button (the secondary path, ~30% of users).
+  const cartBtn = (attrs, extra = '') => `<button class="cart-btn ${extra}" ${attrs} title="前往購買" aria-label="前往購買">${I.cart}</button>`;
+  function setBuy(kind, id) { state.buy = { kind, id }; save(); }
   // Recommendation rank as a star tag (language neutral): #1 filled orange, others outlined.
   const rankTag = n => `<span class="tag ${n === 1 ? 'tag-rank1' : 'tag-rank'}" title="推薦 ${n}">★${n}</span>`;
   const productImg = id => 'https://nw-dlcdnet.asus.com/plugin/productIcons/' + (PRODUCT_IMG[id] || id.replace(/ /g, '_')) + '.png';
@@ -64,7 +67,7 @@
     { id: 'needs', code: '1_010', rail: 'prefs', description: '偏好 1/3：主要用途（可複選，標記最重要的一項）', render: renderNeeds },
     { id: 'care', code: '1_020', rail: 'prefs', description: '偏好 2/3：還在意什麼、外觀、品牌與產品定位', render: renderCare },
     { id: 'home-size', code: '1_030', rail: 'prefs', description: '偏好 3/3：我家的樣子（面積、樓層、回程、地區）', render: renderHomeSize },
-    { id: 'results', code: '2_010', rail: 'rank', description: '推薦結果：機種排行＋配置套組 Top 10。分流點：約 30% 離開、約 70% 進入 Floor plan', render: renderResults },
+    { id: 'results', code: '2_010', rail: 'rank', description: '推薦結果：機種排行＋配置套組 Top 10。兩條路：在我家試擺（約 70%）／購物車前往購買（約 30%）', render: renderResults },
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '離開流程（約 30%）：前往購買頁，仍保留進入 Floor plan 的入口', render: renderExit },
     { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：已自動帶入所選套組，之後都在這一頁操作', render: renderFloorplan },
@@ -272,9 +275,9 @@
       ${top4.length ? `<div class="gauges">${top4.map((m, i) => `<div class="gauge-card" data-model="${esc(m.id)}">
         <div class="gauge-name-row">${rankTag(i + 1)}<div class="gauge-name" title="${esc(m.id)}">${esc(m.id)}</div></div>
         <div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div>
-        <div class="gauge-body"><div class="gauge-photo"><img src="${productImg(m.id)}" alt="${esc(m.id)}" loading="lazy" onerror="this.style.visibility='hidden'"></div>
+        <div class="gauge-body"><div class="gauge-photo">${m.active ? '<span class="tag tag-promo photo-tag">本期主打</span>' : ''}<img src="${productImg(m.id)}" alt="${esc(m.id)}" loading="lazy" onerror="this.style.visibility='hidden'"></div>
         <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>最少 ${m.N} 台</li><li>${m.m.ai ? 'AI 核心' : '一般核心'}</li></ul></div>
-        <div class="gauge-foot">${bundles.some(b => b.r.id === m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">在我家試擺</button>` : '<span></span>'}<div class="gauge-badges">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}${m.active ? '<span class="tag tag-promo">本期主打</span>' : ''}</div></div></div>`).join('')}</div>
+        <div class="gauge-foot"><div class="gauge-actions">${bundles.some(b => b.r.id === m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">在我家試擺</button>` : ''}${cartBtn(`data-buy-model="${esc(m.id)}"`)}</div><div class="gauge-badges">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div></div></div>`).join('')}</div>
         ${rest.length ? `<div class="more-models">${rest.map((m, i) => `<button data-model="${esc(m.id)}">${rankTag(i + 5)}<span>${esc(m.id)}</span></button>`).join('')}</div>` : ''}` : '<div class="card empty">沒有符合目前品牌／定位與空間條件的機種，請調整條件。</div>'}
 
       <div class="section-head"><div><h2>推薦配置套組 · Top ${bundles.length}</h2><div class="muted small">主機＋Node 的組合與最少台數；選一組放進你家試擺</div></div></div>
@@ -284,11 +287,11 @@
           <div class="bundle-meta"><span>${b.N === 1 ? '單機' : 'AiMesh'}</span><span>WiFi ${b.r.wifi}</span><span>各樓層 ${b.floorUnits.join(' / ')} 台</span><span>${esc(E.tierNames[b.r.positioning] || '')}</span>${b.boost || b.reserved ? '<span class="tag tag-promo">本期主打</span>' : ''}</div>
           </div>
         <div class="bundle-units"><b>${b.N}</b><small>台</small><div>${b.N > 1 ? `主機 1 ＋ Node ${b.N - 1}` : '主機 1'}</div></div>
-        <button class="btn btn-sm" data-try="${i}">在我家試擺</button>
+        <div class="bundle-actions"><button class="btn btn-sm" data-try="${i}">在我家試擺</button>${cartBtn(`data-buy-bundle="${i}"`)}</div>
         <details><summary>推薦理由與限制</summary>依你選的用途與在意的功能評估；台數是此面積與樓層下的最低預估，不是實測保證。${u.bh === 'wired' ? '有線' : '無線'}回程與混搭相容仍待驗證。</details>
       </div>`).join('')}</div>` : '<div class="card empty">沒有符合條件的配置套組，請調整條件。</div>'}
 
-      <div class="cta-band"><div><h3>想知道放在家裡哪裡最好？</h3><p>把第一名套組放進你家的平面圖，看每個房間的訊號覆蓋。</p></div><button class="btn" id="cta" ${bundles.length ? '' : 'disabled'}>開始居家配置 →</button></div>
+      <div class="cta-band"><div><h3>想知道放在家裡哪裡最好？</h3><p>把第一名套組放進你家的平面圖，看每個房間的訊號覆蓋。</p></div><div class="cta-actions"><button class="btn" id="cta" ${bundles.length ? '' : 'disabled'}>開始居家配置 →</button>${bundles.length ? cartBtn('data-buy-bundle="0"', 'cart-btn-light') : ''}</div></div>
 `}
     </div>`;
     $('edit').onclick = () => go('needs');
@@ -296,6 +299,8 @@
     el.querySelectorAll('[data-model]').forEach(c => (c.onclick = () => { state.modelId = c.dataset.model; save(); go('model'); }));
     el.querySelectorAll('[data-try]').forEach(b => (b.onclick = () => { pickBundle(bundles[+b.dataset.try]); go('floorplan'); }));
     el.querySelectorAll('[data-try-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); pickBundle(bundles.find(x => x.r.id === b.dataset.tryModel)); go('floorplan'); }));
+    el.querySelectorAll('[data-buy-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); setBuy('model', b.dataset.buyModel); go('exit'); }));
+    el.querySelectorAll('[data-buy-bundle]').forEach(b => (b.onclick = () => { setBuy('bundle', bundleKey(bundles[+b.dataset.buyBundle])); go('exit'); }));
     const cta = $('cta');
     if (cta) cta.onclick = () => { pickBundle(bundles[0]); go('floorplan'); };
     if (bundles.length && !state.decisionsSeen.next) { state.decisionsSeen.next = true; save(); setTimeout(() => openDecision('next'), 600); }
@@ -328,22 +333,29 @@
         </div>
       </div></div>`;
     $('back').onclick = () => go('results');
-    $('buy').onclick = () => go('exit');
+    $('buy').onclick = () => { setBuy('model', m.id); go('exit'); };
     $('try').onclick = () => { pickBundle(best); go('floorplan'); };
   }
 
   // ── 2_030 Exit ──
   function renderExit(el) {
+    const { bundles, models } = results();
+    const buy = state.buy || {};
+    const bundle = buy.kind === 'bundle' ? bundles.find(x => bundleKey(x) === buy.id) : null;
+    const model = buy.kind === 'model' ? buy.id : null;
+    const items = bundle ? (bundle.N > 1 && bundle.n.id !== bundle.r.id ? [[bundle.r.id, 1], [bundle.n.id, bundle.N - 1]] : [[bundle.r.id, bundle.N]]) : model ? [[model, (models.find(x => x.id === model) || {}).N || 1]] : [];
+    const planBundle = bundle || (model && bundles.find(x => x.r.id === model)) || bundles[0];
     el.innerHTML = `<div class="page"><div class="exit-wrap">
       <div class="exit-ico">${I.cart}</div>
       <h1 class="page-title">已前往 ASUS 購買頁面</h1>
       <p class="page-sub">示意：此處實際會開啟官網商品頁或經銷通路。約 30% 的使用者在這裡完成流程。</p>
+      ${items.length ? `<div class="buy-items">${items.map(([id, qty]) => `<div class="buy-item"><img src="${productImg(id)}" alt="" onerror="this.style.visibility='hidden'"><span>${esc(id)}</span><b>× ${qty}</b></div>`).join('')}</div>` : ''}
       <div class="card" style="margin-top:30px;text-align:left;display:flex;gap:18px;align-items:center;flex-wrap:wrap">
-        <span class="quick-ico">${I.plan}</span><div style="flex:1;min-width:200px"><div class="quick-title">買之前，想先看看家裡怎麼擺？</div><div class="quick-sub">把推薦套組放進平面圖，確認每個房間都收得到。</div></div>
-        <button class="btn btn-sm" id="plan">開始居家配置</button></div>
+        <span class="quick-ico">${I.plan}</span><div style="flex:1;min-width:200px"><div class="quick-title">買之前，想先看看家裡怎麼擺？</div><div class="quick-sub">把${bundle || model ? '這組' : '推薦套組'}放進平面圖，確認每個房間都收得到。</div></div>
+        <button class="btn btn-sm" id="plan" ${planBundle ? '' : 'disabled'}>在我家試擺</button></div>
       <button class="link-btn" id="back" style="margin-top:22px">‹ 回推薦結果</button>
     </div></div>`;
-    $('plan').onclick = () => { if (!state.bundleId) { const b = results().bundles[0]; pickBundle(b); } go('floorplan'); };
+    $('plan').onclick = () => { pickBundle(planBundle); go('floorplan'); };
     $('back').onclick = () => go('results');
   }
 
