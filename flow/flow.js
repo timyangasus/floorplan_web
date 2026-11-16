@@ -291,7 +291,7 @@
       </div>`).join('')}</div>` : '<div class="card empty">沒有符合條件的配置套組，請調整條件。</div>'}
 
       <div class="cta-band"><div><h3>想知道放在家裡哪裡最好？</h3><p>把第一名套組放進你家的平面圖，看每個房間的訊號覆蓋。</p></div><button class="btn" id="cta" ${bundles.length ? '' : 'disabled'}>開始居家配置 →</button></div>
-      <p class="note">規劃沙盒：核心規格參考官方；有效覆蓋與多數定價為測試資料。結果不顯示金額。產品定位為示範分級，非官方定位。</p>`}
+`}
     </div>`;
     $('edit').onclick = () => go('needs');
     $('sort').querySelectorAll('button').forEach(b => (b.onclick = () => { state.sort = b.dataset.v; save(); render(); }));
