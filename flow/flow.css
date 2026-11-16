@@ -144,7 +144,6 @@ svg { display: block; }
 .fs-step.done:hover .fs-label { color: var(--accent); }
 .fs-step.current { color: var(--ink); font-weight: 500; }
 .fs-step.current .fs-dot { background: linear-gradient(135deg, #3b9bff, #1663f0); border-color: transparent; color: #fff; box-shadow: 0 4px 12px rgba(25, 130, 255, .3); }
-.fs-step.locked .fs-label::after { content: " 🔒"; font-size: 11px; opacity: .6; }
 .fs-line { flex: 1; min-width: 24px; max-width: 160px; height: 2px; margin: 0 14px; background: #e1e5ea; border-radius: 2px; }
 .fs-line.done { background: linear-gradient(90deg, #8fc2ff, #1982ff); }
 .fs-hint { margin-left: auto; padding-left: 20px; font-size: 13px; color: var(--ink-3); white-space: nowrap; }
