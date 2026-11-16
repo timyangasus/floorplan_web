@@ -391,7 +391,23 @@ svg { display: block; }
 .gauge-facts li { position: relative; padding-left: 12px; margin: 5px 0; }
 .gauge-facts li::before { content: ""; position: absolute; left: 0; top: 9px; width: 4px; height: 4px; border-radius: 50%; background: var(--ink-2); }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--panel); color: var(--ink-2); margin: 6px 4px 0 0; }
-.badge.promo { background: #fff1de; color: #b4650f; }
+.badge.promo { background: linear-gradient(90deg, #ff9f43, #f5733b); color: #fff; font-weight: 600; }
+
+/* #1 recommendation: make the choice obvious */
+.gauge-card.featured {
+  position: relative; padding-top: 44px;
+  background: linear-gradient(180deg, #eaf3ff 0%, #ffffff 62%);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.gauge-card.featured:hover { background: linear-gradient(180deg, #e2eeff 0%, #ffffff 62%); }
+.gauge-card.featured .gauge-name { font-weight: 600; color: var(--accent-2); }
+.feature-ribbon {
+  position: absolute; top: 0; left: 0; right: 0; height: 30px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(90deg, #3b9bff, #1663f0); color: #fff; font-size: 13px; font-weight: 600; letter-spacing: 1px;
+}
+.feature-try { margin-top: 14px; width: 100%; }
+.bundle.featured { background: linear-gradient(90deg, #eef5ff, transparent 70%); margin: 0 -28px; padding-left: 28px; padding-right: 28px; border-radius: 12px; }
+.best-tag { display: inline-block; vertical-align: middle; margin-left: 6px; font-size: 11px; font-weight: 600; color: #fff; background: var(--accent); border-radius: 999px; padding: 2px 9px; }
 .more-models { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .more-models button { font-size: 13px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; }
 .more-models button:hover { border-color: var(--accent); color: var(--accent); }
