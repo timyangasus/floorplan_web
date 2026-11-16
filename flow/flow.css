@@ -374,11 +374,13 @@ svg { display: block; }
 .gauges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; background: var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
 .gauge-card { background: var(--card); padding: 22px; cursor: pointer; transition: background .15s; display: flex; flex-direction: column; }
 .gauge-card:hover { background: #fbfcfd; }
-.gauge-head { display: flex; justify-content: flex-end; align-items: center; gap: 8px; min-height: 22px; }
-.gauge-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.gauge-name-row, .gauge-sub-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.gauge-name-row .tag, .gauge-sub-row .tag { flex-shrink: 0; }
+.gauge-sub-row { min-height: 22px; }
+.gauge-name-row .gauge-name { flex: 1; min-width: 0; }
 .title-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
 /* Name and subtitle are one line each so every card's photo sits at the same height */
-.gauge-name { font-size: 20px; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gauge-name { font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gauge-sub { color: var(--ink-3); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gauge-body { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
 .gauge-photo { width: 124px; height: 124px; flex-shrink: 0; border-radius: 16px; background: radial-gradient(circle at 50% 40%, #ffffff 0%, #eef1f5 75%); display: grid; place-items: center; }
