@@ -69,7 +69,7 @@
     { id: 'home-size', code: '1_030', rail: 'prefs', description: '偏好 3/3：我家的樣子（面積、樓層、回程、地區）', render: renderHomeSize },
     { id: 'results', code: '2_010', rail: 'rank', description: '推薦結果：機種排行＋配置套組 Top 10。兩條路：在我家試擺（約 70%）／購物車前往購買（約 30%）', render: renderResults },
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
-    { id: 'exit', code: '2_030', rail: 'rank', description: '離開流程（約 30%）：前往購買頁，仍保留進入 Floor plan 的入口', render: renderExit },
+    { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
     { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：已自動帶入所選套組，之後都在這一頁操作', render: renderFloorplan },
   ];
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -349,8 +349,7 @@
     const planBundle = bundle || (model && bundles.find(x => x.r.id === model)) || bundles[0];
     el.innerHTML = `<div class="page"><div class="exit-wrap">
       <div class="exit-ico">${I.cart}</div>
-      <h1 class="page-title">前往 ASUS 購買頁面</h1>
-      <p class="page-sub">示意：此處實際會開啟官網商品頁或經銷通路。</p>
+      <h1 class="page-title">${items.length ? '你選的配置' : '前往 ASUS 線上購物'}</h1>
       ${items.length ? `<div class="buy-items">${items.map(([id, qty]) => `<div class="buy-item"><img src="${productImg(id)}" alt="" onerror="this.style.visibility='hidden'"><span>${esc(id)}</span><b>× ${qty}</b></div>`).join('')}</div>` : ''}
       <a class="btn exit-store" href="${ASUS_STORE}" target="_blank" rel="noopener">${I.cart.replace('<svg', '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"')}前往 ASUS 線上購物</a>
       <p class="exit-try">買之前想先看看家裡怎麼擺？<button class="link-btn" id="plan" ${planBundle ? '' : 'disabled'}>在我家試擺 ›</button></p>
