@@ -544,6 +544,7 @@
     const orphans = plansOnly.filter(p => !recOf(p)).sort((x, y) => y.updatedAt - x.updatedAt);
     if (orphans.length) groups.push({ key: 'other', rec: null, plans: orphans });
     // Open groups: remembered per viewer; by default the group holding the open plan (or the first).
+    if (Array.isArray(state.openGroups) && state.openGroups.length > 1) state.openGroups = state.openGroups.slice(-1);
     if (!Array.isArray(state.openGroups)) {
       const cur = activePlan(), g = groups.find(x => cur && x.plans.includes(cur)) || groups[0];
       state.openGroups = g ? [g.key] : [];
@@ -597,7 +598,7 @@
     el.querySelectorAll('[data-toggle]').forEach(h => (h.onclick = e => {
       if (e.target.closest('button, input')) return;
       const k = h.dataset.toggle;
-      state.openGroups = state.openGroups.includes(k) ? state.openGroups.filter(x => x !== k) : [...state.openGroups, k];
+      state.openGroups = state.openGroups.includes(k) ? [] : [k]; // accordion: one group open at a time
       save(); render();
     }));
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
@@ -617,7 +618,7 @@
       if (!confirm(isPlan(x) ? `刪除「${x.name}」？刪除後無法復原。` : `刪除「${x.name}」？${n ? `底下 ${n} 個方案不會刪除，會移到「其他方案」。` : ''}`)) return;
       store.plans = store.plans.filter(y => y.id !== x.id);
       if (store.activeId === x.id) { const nxt = store.plans.find(isPlan); store.activeId = nxt ? nxt.id : null; state.loadedPlanId = null; save(); }
-      if (!isPlan(x) && n && !state.openGroups.includes('other')) { state.openGroups = [...state.openGroups, 'other']; save(); }
+      if (!isPlan(x) && n) { state.openGroups = ['other']; save(); }
       savePlans(); render();
     }));
     el.querySelectorAll('[data-rename]').forEach(b => (b.onclick = () => {
