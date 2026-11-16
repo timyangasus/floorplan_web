@@ -383,6 +383,7 @@
     try {
       AUTH_KEYS.forEach(k => localStorage.setItem(k, 'standalone'));
       localStorage.setItem('standalone_projects', JSON.stringify(buildProject(b, u)));
+      localStorage.removeItem('aae_active_floor_demo'); // open a freshly seeded plan on 1F
       return true;
     } catch (e) { return false; }
   }
@@ -398,11 +399,14 @@
       if (state.seededKey !== key) { fresh = seedFloorplan(b, u); state.seededKey = key; state.bundleId = bundleKey(b); save(); }
     }
     const mapped = b ? [b.r.id, b.n.id].filter((id, i, a) => a.indexOf(id) === i && FP_MODEL[id] && FP_MODEL[id] !== id) : [];
+    // Devices sit on different floors; the app only shows one floor at a time, so offer a floor switcher.
+    const floorList = b && b.floorUnits.length > 1 ? buildProject(b, u).demo.floors.map(f => ({ id: f.id, name: f.name, devices: f.routers.map(r => r.displayName.replace(' · ', ' ')) })) : [];
     el.innerHTML = `<div class="page-full">
       <div class="fp-bar">
         <span class="quick-ico" style="width:38px;height:38px">${I.plan}</span>
         <div><div class="fp-bar-title">${b ? `${esc(b.r.id)} × 1${b.N > 1 ? ` ＋ Node ${esc(b.n.id)} × ${b.N - 1}` : ''}` : '自由試用'}</div>
-          <div class="fp-bar-meta">${b ? `共 ${b.N} 台 · ${areaText(u.area)} · ${u.floors} 層 · 已自動放進示意平面圖，可拖曳調整或上傳自家平面圖` : '未帶入推薦套組；可上傳平面圖並自行放置路由器'}</div></div>
+          <div class="fp-bar-meta">${b ? `共 ${b.N} 台 · ${areaText(u.area)} · ${u.floors} 層 · 已自動放進示意平面圖，可拖曳調整或上傳自家平面圖` : '未帶入推薦套組；可上傳平面圖並自行放置路由器'}</div>
+          ${floorList.length ? `<div class="fp-floors">${floorList.map((f, i) => `<button class="fp-floor${i === 0 ? ' on' : ''}" data-floor="${f.id}"><b>${f.name}</b>${esc(f.devices.join('、'))}</button>`).join('')}</div>` : ''}</div>
         ${mapped.length ? `<span class="fp-warn" title="Floor plan 機種庫沒有同名型號，暫以近似機種模擬">${mapped.map(id => esc(id) + '→' + esc(FP_MODEL[id])).join('、')}</span>` : ''}
         <span class="spacer"></span>
         ${b ? '<button class="btn btn-ghost btn-sm" id="reseed" title="捨棄目前的調整，重新放入推薦套組">重新帶入</button>' : ''}
@@ -413,7 +417,24 @@
     $('swap').onclick = () => go('results');
     const re = $('reseed');
     if (re) re.onclick = () => { seedFloorplan(b, u); $('fpFrame').src = FP_SRC + '?t=' + Date.now(); toast('已重新帶入推薦套組'); };
+    if (floorList.length) {
+      const frameDoc = () => { try { return $('fpFrame').contentDocument; } catch (e) { return null; } };
+      el.querySelectorAll('[data-floor]').forEach(btn => (btn.onclick = () => {
+        const item = frameDoc() && frameDoc().querySelector(`.floor-item[data-floor-id="${btn.dataset.floor}"]`);
+        if (!item) return toast('Floor plan 還在載入，請稍候');
+        item.click(); syncFloor();
+      }));
+      // Keep the switcher in sync when the user changes floor inside the app.
+      const syncFloor = () => {
+        const active = frameDoc() && frameDoc().querySelector('.floor-item.active');
+        if (active) el.querySelectorAll('[data-floor]').forEach(btn => btn.classList.toggle('on', btn.dataset.floor === active.dataset.floorId));
+      };
+      clearInterval(floorSyncTimer);
+      floorSyncTimer = setInterval(() => { if (!document.body.contains(el.querySelector('.fp-floors'))) return clearInterval(floorSyncTimer); syncFloor(); }, 700);
+      setTimeout(() => toast(`這組分在 ${floorList.length} 個樓層，點上方樓層切換查看`), 1200);
+    }
   }
+  let floorSyncTimer;
 
   // ── Toast ──
   let toastTimer;
