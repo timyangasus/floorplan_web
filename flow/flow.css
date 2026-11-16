@@ -522,10 +522,8 @@ svg { display: block; }
 /* ── 我的規劃 ── */
 .plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 26px; }
 .plan-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; text-align: left; border: 2px solid transparent; }
-.plan-card.current { border-color: var(--accent); }
 .plan-thumb { position: relative; height: 150px; background: linear-gradient(180deg, #f6f8fb, #eef1f5); display: grid; place-items: center; padding: 14px; }
 .plan-thumb svg, .plan-thumb img { width: 100%; height: 100%; object-fit: contain; }
-.plan-current { position: absolute; top: 10px; left: 10px; }
 .tag-kind-rec { background: #fff; color: #6b4fd6; border-color: #d6ccf7; }
 .plan-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .plan-name-row { display: flex; align-items: center; gap: 6px; }
@@ -579,4 +577,3 @@ svg { display: block; }
 .rail-btn.active .rail-dot { box-shadow: 0 0 0 2px #2a7bf6; }
 .tag-new { background: linear-gradient(90deg, #ffa24c, #f5733b); color: #fff; letter-spacing: .5px; }
 .plan-card.is-new { box-shadow: 0 0 0 2px #ffb27a, var(--shadow); }
-.plan-card.is-new.current { box-shadow: var(--shadow); }

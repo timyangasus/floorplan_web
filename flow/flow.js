@@ -569,8 +569,8 @@
     const renameBtn = x => `<button class="plan-icon" data-rename="${x.id}" title="改名" aria-label="改名">✎</button>`;
     const delBtn = x => `<button class="plan-icon plan-del" data-del="${x.id}" title="刪除" aria-label="刪除"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M7,21q-0.82,0-1.41-0.59T5,19V6H4V4H9V3h6V4h5V6H19V19q0,0.82-0.59,1.41T17,21H7ZM17,6H7V19H17V6ZM9,17h2V8H9v9Zm4,0h2V8H13v9ZM7,6V19V6Z"/></svg></button>`;
     const created = (x, cls = '') => `<span class="plan-time ${cls}" title="建立時間">${fmtTime(x.createdAt)}</span>`;
-    const planCard = pl => `<div class="plan-card${pl.id === store.activeId ? ' current' : ''}${isNew(pl) ? ' is-new' : ''}">
-        <div class="plan-thumb">${planThumb(pl)}${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
+    const planCard = pl => `<div class="plan-card${isNew(pl) ? ' is-new' : ''}">
+        <div class="plan-thumb">${planThumb(pl)}</div>
         <div class="plan-body">
           <div class="plan-name-row">${isNew(pl) ? newTag : ''}<span class="plan-name">${esc(pl.name)}</span>${renameBtn(pl)}${created(pl, 'plan-time-inline')}</div>
           <div class="plan-meta">${esc(pl.label)}</div>
