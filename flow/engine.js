@@ -50,7 +50,7 @@
   function ability(m) { return { Outdoor: Number(m.special === '戶外'), R: ({ '6': .6, '6E': .8, '7': 1 })[m.wifi], H: Math.min(1, (m.bands - 1) / 2), W: Math.min(1, m.port / 2.5), M: +m.mesh, V: +m.vpn, F: +m.family, S: +m.security, I: +m.segment, Q: +m.qos, G: +m.game, C: +m.creator, O: +m.auto, AI: +m.ai, RGB: +m.rgb, Quiet: +m.quiet }; }
   function demands(x) { return [.6 * x.M + .4 * x.H, .45 * x.G + .3 * x.W + .15 * x.Q + .1 * x.R, .35 * x.V + .35 * x.W + .2 * x.Q + .1 * x.R, .4 * x.W + .35 * x.Q + .15 * x.H + .1 * x.R, .4 * x.C + .3 * x.W + .2 * x.Q + .1 * x.R, .6 * x.I + .25 * x.S + .15 * x.M]; }
   function fit(x, u, c, N = null) {
-    const d = demands(x), e = [N === null ? x.O : .8 * x.O + .2 / N, .5 * x.F + .5 * x.S, x.G, .5 * x.V + .5 * x.I, u.style === 'rgb' ? x.RGB : x.Quiet, 0, x.AI, x.Outdoor];
+    const d = demands(x), e = [N === null ? x.O : .8 * x.O + .2 / N, .5 * x.F + .5 * x.S, x.G, .5 * x.V + .5 * x.I, u.style === 'rgb' ? x.RGB : u.style === 'both' ? Math.max(x.RGB, x.Quiet) : x.Quiet, 0, x.AI, x.Outdoor];
     const pw = u.p.map(i => (i === u.top ? 2 : 1)), si = u.s.filter(i => i !== 5 && (i !== 4 || u.style !== 'none')), sw = si.map(i => (i === 2 && u.p.includes(1) ? .5 : 1));
     const P = u.p.reduce((s, i, k) => s + d[i] * pw[k], 0) / pw.reduce((s, v) => s + v, 0);
     const T = si.length ? si.reduce((s, i, k) => s + e[i] * sw[k], 0) / sw.reduce((s, v) => s + v, 0) : 0, a = si.length ? c.alpha : 1;

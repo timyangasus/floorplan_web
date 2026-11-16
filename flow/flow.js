@@ -5,16 +5,18 @@
 
   // ── State (per-viewer convenience only; works without storage) ──
   const STORE = 'fpw_flow_state';
-  const initial = () => ({ p: [0], top: 0, s: [], style: 'none', brands: [], tiers: [], includeTravel: false, area: 100, floors: 2, bh: 'wired', country: 'TW', sort: 'balanced', bundleId: null, modelId: null, seededKey: null, decisionsSeen: {}, prefsDone: false, brandOn: false, tierOn: false });
+  const initial = () => ({ p: [0], top: 0, s: [], styles: [], brands: [], tiers: [], includeTravel: false, area: 100, floors: 2, bh: 'wired', country: 'TW', sort: 'balanced', bundleId: null, modelId: null, seededKey: null, decisionsSeen: {}, prefsDone: false, brandOn: false, tierOn: false });
   let state = initial();
   try { Object.assign(state, JSON.parse(localStorage.getItem(STORE)) || {}); } catch (e) { /* ignore */ }
   state.brands = (state.brands || []).filter(b => ['ASUS', 'ROG', 'TUF'].includes(b));
+  if (!Array.isArray(state.styles)) state.styles = state.style && state.style !== 'none' ? [state.style] : [];
+  delete state.style;
   if (state.brands.length) state.brandOn = true;
   if ((state.tiers || []).length) state.tierOn = true;
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) { /* ignore */ } };
 
   function engineInput() {
-    return { p: state.p, s: state.s, top: state.p.includes(state.top) ? state.top : state.p[0], style: state.style, modelBrands: state.brands, bundleBrands: state.brands, modelTiers: state.tiers, bundleTiers: state.tiers, includeTravel: state.includeTravel, country: state.country, area: state.area, floors: state.floors, sort: state.sort, bh: state.bh };
+    return { p: state.p, s: state.s, top: state.p.includes(state.top) ? state.top : state.p[0], style: state.styles.length === 2 ? 'both' : state.styles[0] || 'none', modelBrands: state.brands, bundleBrands: state.brands, modelTiers: state.tiers, bundleTiers: state.tiers, includeTravel: state.includeTravel, country: state.country, area: state.area, floors: state.floors, sort: state.sort, bh: state.bh };
   }
   function results() {
     const c = E.catalog(), u = engineInput();
@@ -175,7 +177,7 @@
       <div class="subopts" id="subopts"></div>
       <div class="q-foot"><button class="link-btn" id="back">‹ 上一步</button><button class="btn" id="next">下一步</button></div></div>`;
     const items = [
-      ...E.secondaryNames.map((label, i) => ({ key: 's' + i, label, on: () => state.s.includes(i), toggle: () => { state.s = state.s.includes(i) ? state.s.filter(x => x !== i) : [...state.s, i].sort(); if (i === 4) state.style = state.s.includes(4) ? 'quiet' : 'none'; } })),
+      ...E.secondaryNames.map((label, i) => ({ key: 's' + i, label, on: () => state.s.includes(i), toggle: () => { state.s = state.s.includes(i) ? state.s.filter(x => x !== i) : [...state.s, i].sort(); if (i === 4) state.styles = state.s.includes(4) ? ['quiet'] : []; } })),
       { key: 'brand', label: '指定品牌／系列', on: () => state.brandOn, toggle: () => { state.brandOn = !state.brandOn; state.brands = state.brandOn ? ['ASUS'] : []; } },
       { key: 'tier', label: '指定產品定位', on: () => state.tierOn, toggle: () => { state.tierOn = !state.tierOn; state.tiers = state.tierOn ? ['入門'] : []; } },
       { key: 'travel', label: '也看旅行機種', on: () => state.includeTravel, toggle: () => { state.includeTravel = !state.includeTravel; } },
@@ -185,7 +187,7 @@
     const draw = () => {
       $('sec').innerHTML = items.map(it => `<button class="chip${it.on() ? ' on' : ''}" data-k="${it.key}">${it.on() ? '✓ ' : ''}${it.label}</button>`).join('');
       const panels = [];
-      if (state.s.includes(4)) panels.push(`<div class="subopt" data-p="style"><span class="subopt-label">外觀偏好</span><div class="chips">${opt('style', 'quiet', '低調內置天線', state.style === 'quiet')}${opt('style', 'rgb', 'RGB 燈效', state.style === 'rgb')}</div></div>`);
+      if (state.s.includes(4)) panels.push(`<div class="subopt" data-p="style"><span class="subopt-label">外觀偏好</span><div class="chips">${opt('style', 'quiet', '低調內置天線', state.styles.includes('quiet'))}${opt('style', 'rgb', 'RGB 燈效', state.styles.includes('rgb'))}</div></div>`);
       if (state.brandOn) panels.push(`<div class="subopt" data-p="brand"><span class="subopt-label">品牌／系列</span><div class="chips">${['ASUS', 'ROG', 'TUF'].map(v => opt('brand', v, v, state.brands.includes(v))).join('')}</div></div>`);
       if (state.tierOn) panels.push(`<div class="subopt" data-p="tier"><span class="subopt-label">產品定位</span><div class="chips">${['入門', '中階', '高階'].map(v => opt('tier', v, E.tierNames[v], state.tiers.includes(v), E.tierDescriptions[v])).join('')}</div></div>`);
       $('subopts').innerHTML = panels.join('');
@@ -195,13 +197,11 @@
       $('subopts').querySelectorAll('[data-g]').forEach(b => (b.onclick = () => {
         const v = b.dataset.v;
         // Sub-options start with the first one picked; clearing them all unticks the parent item.
-        if (b.dataset.g === 'style') {
-          state.style = state.style === v ? 'none' : v;
-          if (state.style === 'none') state.s = state.s.filter(x => x !== 4);
-        } else {
-          const key = b.dataset.g === 'brand' ? 'brands' : 'tiers';
-          state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : [...state[key], v];
-          if (!state[key].length) state[b.dataset.g === 'brand' ? 'brandOn' : 'tierOn'] = false;
+        const key = { style: 'styles', brand: 'brands', tier: 'tiers' }[b.dataset.g];
+        state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : [...state[key], v];
+        if (!state[key].length) {
+          if (key === 'styles') state.s = state.s.filter(x => x !== 4);
+          else state[key === 'brands' ? 'brandOn' : 'tierOn'] = false;
         }
         save(); draw();
       }));
