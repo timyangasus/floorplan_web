@@ -73,7 +73,7 @@
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
     { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；換套組會另存新方案，可新增方案複製格局', render: renderFloorplan },
-    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：未完成的規劃（可繼續或捨棄）＋我的家底下的所有方案，可開啟、改名、刪除、複製格局新增方案', render: renderPlans },
+    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：未完成（偏好沒填完）＋推薦紀錄（看完推薦即完成）＋居家配置方案，可開啟、改名、刪除、複製格局新增方案', render: renderPlans },
   ];
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
 
@@ -176,7 +176,7 @@
     };
     draw();
     el.querySelector('[data-to]').onclick = () => go('home');
-    $('next').onclick = () => go('care');
+    $('next').onclick = () => { if (!state.prefsDone) { state.inProgress = true; save(); } go('care'); };
   }
 
   // ── 1_020 Care ──
@@ -265,6 +265,8 @@
   // ── 2_010 Results ──
   function renderResults(el) {
     const { u, models, bundles } = results();
+    if (u.country === 'TW') recordRecommendation(models, bundles);
+    if (state.inProgress) { state.inProgress = false; save(); }
     const top4 = models.slice(0, 4), rest = models.slice(4);
     const tags = [u.p.map(i => E.primaryNames[i] + (i === u.top && u.p.length > 1 ? '★' : '')).join('、'), ...u.s.map(i => E.secondaryNames[i]), areaText(u.area), `${u.floors} 層`, u.bh === 'wired' ? '有線回程' : '無線回程', state.brands.length ? '品牌：' + state.brands.join('／') : null, state.tiers.length ? '定位：' + state.tiers.map(t => E.tierNames[t]).join('／') : null].filter(Boolean);
     el.innerHTML = `<div class="page">
@@ -411,7 +413,35 @@
     try { localStorage.setItem(PLANS_KEY, JSON.stringify(store)); return true; }
     catch (e) { toast('瀏覽器儲存空間不足，請到「我的規劃」刪除舊方案'); return false; }
   }
-  const activePlan = () => store.plans.find(x => x.id === store.activeId) || null;
+  // Two kinds of entries: 'plan' (went into 居家配置, has a floor plan) and 'rec' (只看推薦: prefs + top picks).
+  const isPlan = x => x.kind !== 'rec';
+  const activePlan = () => store.plans.find(x => x.id === store.activeId && isPlan(x)) || null;
+  const samePrefs = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+  // Viewing the results counts as finishing (the ~30% who only want to know what to buy):
+  // keep a 推薦紀錄 for these prefs unless a plan with the same prefs already exists.
+  function recordRecommendation(models, bundles) {
+    if (!models.length && !bundles.length) return;
+    const prefs = prefsOf();
+    if (store.plans.some(x => isPlan(x) && samePrefs(x.prefs, prefs))) return;
+    const top = models.slice(0, 3).map(m => m.id), bundle = bundles[0] ? bundleLabel(bundles[0]) : '';
+    const rec = store.plans.find(x => x.kind === 'rec' && samePrefs(x.prefs, prefs));
+    if (rec) { rec.top = top; rec.bundle = bundle; rec.updatedAt = Date.now(); }
+    else {
+      store.recSeq = (store.recSeq || 0) + 1;
+      store.plans.unshift({ id: 'rc_' + Date.now(), kind: 'rec', name: '推薦紀錄 ' + store.recSeq, createdAt: Date.now(), updatedAt: Date.now(), prefs, top, bundle });
+    }
+    store.plans.sort((x, y) => y.updatedAt - x.updatedAt);
+    savePlans();
+  }
+  function openRecord(id, thenTry) {
+    const rec = store.plans.find(x => x.id === id);
+    if (!rec) return;
+    capturePlan();
+    Object.assign(state, JSON.parse(JSON.stringify(rec.prefs)));
+    state.prefsDone = true; state.bundleId = null; state.newPlanFrom = null; state.inProgress = false; save();
+    if (thenTry) { pickBundle(results().bundles[0]); go('floorplan'); } else go('results');
+  }
   const prefsOf = () => Object.fromEntries(PREF_KEYS.map(k => [k, JSON.parse(JSON.stringify(state[k]))]));
   const bundleLabel = b => `${b.r.id} × 1${b.N > 1 ? ` ＋ Node ${b.n.id} × ${b.N - 1}` : ''}`;
   const fmtTime = ts => { const d = new Date(ts); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
@@ -456,6 +486,7 @@
     const { project, rebuilt } = placeOnLayout(b, u, layout);
     store.seq += 1;
     const plan = { id: 'pl_' + Date.now(), name: '方案 ' + store.seq, createdAt: Date.now(), updatedAt: Date.now(), prefs: prefsOf(), bundleId: bundleKey(b), label: bundleLabel(b), units: b.N, project };
+    store.plans = store.plans.filter(x => !(x.kind === 'rec' && samePrefs(x.prefs, plan.prefs)));
     store.plans.unshift(plan); store.activeId = plan.id;
     savePlans();
     return { plan, rebuilt };
@@ -478,7 +509,7 @@
     capturePlan();
     const src = store.plans.find(x => x.id === fromId);
     if (src) Object.assign(state, JSON.parse(JSON.stringify(src.prefs)));
-    state.newPlanFrom = src ? src.id : null; state.bundleId = null; state.prefsDone = true; save();
+    state.newPlanFrom = src ? src.id : null; state.bundleId = null; state.prefsDone = true; state.inProgress = true; save();
     go('needs');
   }
 
@@ -499,48 +530,61 @@
   // ── 4_010 我的規劃 ──
   function renderPlans(el) {
     capturePlan();
-    const list = store.plans;
-    // Work in progress that is not saved as a plan yet (prefs done, plan not created / changed).
-    const cur = activePlan();
-    const pending = state.prefsDone && state.seededKey !== 'blank' && (state.newPlanFrom || !cur || cur.bundleId !== state.bundleId || JSON.stringify(cur.prefs) !== JSON.stringify(prefsOf()));
-    const next = FLOW[unlocked()];
+    const list = store.plans.slice().sort((x, y) => y.updatedAt - x.updatedAt);
+    const plansOnly = list.filter(isPlan), recs = list.filter(x => !isPlan(x));
+    // Unfinished = the questionnaire was started but its results have not been viewed yet.
+    const pending = state.inProgress && state.seededKey !== 'blank';
     const src = state.newPlanFrom && store.plans.find(x => x.id === state.newPlanFrom);
     const pendingCard = pending ? `<div class="pending-card">
-        <span class="quick-ico">${next.key === 'plan' ? I.plan : I.rank}</span>
+        <span class="quick-ico">${I.prefs}</span>
         <div class="pending-body"><div class="pending-title">未完成的規劃 <span class="tag tag-rank">未完成</span></div>
-          <div class="quick-sub">${state.bundleId ? '已選配置套組，尚未進入居家配置' : '已完成偏好設定，尚未選配置套組'}${src ? `　·　沿用「${esc(src.name)}」的格局` : ''}</div>
+          <div class="quick-sub">偏好設定還沒填完${src ? `　·　新增方案，沿用「${esc(src.name)}」的格局` : ''}</div>
           <div class="quick-sub">${esc(state.p.map(i => E.primaryNames[i]).join('、'))} · ${areaText(state.area)} · ${state.floors} 層</div></div>
-        <button class="link-btn" id="dropPending">捨棄</button><button class="btn btn-sm" id="resumePending">繼續：${next.label}</button>
+        <button class="link-btn" id="dropPending">捨棄</button><button class="btn btn-sm" id="resumePending">繼續填寫</button>
       </div>` : '';
+    const areaOf = pr => (pr.areaUnit === 'ping' ? (pr.area / PING).toFixed(0) + ' 坪' : Math.round(pr.area) + ' m²');
+    const nameRow = pl => `<div class="plan-name-row"><span class="plan-name">${esc(pl.name)}</span><button class="plan-icon" data-rename="${pl.id}" title="改名" aria-label="改名">✎</button></div>`;
+    const delBtn = pl => `<button class="plan-icon plan-del" data-del="${pl.id}" title="刪除" aria-label="刪除">🗑</button>`;
+    const planCard = pl => `<div class="plan-card${pl.id === store.activeId ? ' current' : ''}">
+        <div class="plan-thumb">${planThumb(pl)}<span class="tag tag-kind-plan plan-kind">居家配置</span>${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
+        <div class="plan-body">${nameRow(pl)}
+          <div class="plan-meta">${esc(pl.label)}</div>
+          <div class="plan-meta muted">共 ${pl.units} 台 · ${areaOf(pl.prefs)} · ${pl.prefs.floors} 層 · ${fmtTime(pl.updatedAt)}</div>
+          <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button><button class="try-link" data-copy="${pl.id}">複製格局新增方案</button>${delBtn(pl)}</div>
+        </div></div>`;
+    const recCard = rc => `<div class="plan-card">
+        <div class="plan-thumb rec-thumb">${(rc.top || []).slice(0, 3).map((id, i) => `<span class="rec-item"><img src="${productImg(id)}" alt="" onerror="this.style.visibility='hidden'">${rankTag(i + 1)}</span>`).join('')}<span class="tag tag-kind-rec plan-kind">推薦紀錄</span></div>
+        <div class="plan-body">${nameRow(rc)}
+          <div class="plan-meta">${esc((rc.top || []).join('、'))}</div>
+          <div class="plan-meta muted">${esc(rc.prefs.p.map(i => E.primaryNames[i]).join('、'))} · ${areaOf(rc.prefs)} · ${rc.prefs.floors} 層 · ${fmtTime(rc.updatedAt)}</div>
+          <div class="plan-actions"><button class="btn btn-sm" data-rec="${rc.id}">查看推薦</button><button class="try-link" data-rec-try="${rc.id}">在我家試擺</button>${delBtn(rc)}</div>
+        </div></div>`;
+    const counts = [plansOnly.length ? `${plansOnly.length} 個方案` : '', recs.length ? `${recs.length} 筆推薦紀錄` : ''].filter(Boolean).join(' · ');
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
-        <p class="page-sub">${list.length ? `${list.length} 個方案 · 每個方案各自保存偏好、套組與擺放位置` : '還沒有方案。完成推薦並進入居家配置後，會自動存成方案。'}</p></div></div>
+        <p class="page-sub">${list.length ? counts : '還沒有紀錄。看完推薦結果或進入居家配置後，會自動存在這裡。'}</p></div></div>
       ${pendingCard}
-      ${list.length ? `<div class="plan-grid">${list.map(pl => `<div class="plan-card${pl.id === store.activeId ? ' current' : ''}" data-id="${pl.id}">
-          <div class="plan-thumb">${planThumb(pl)}${pl.id === store.activeId ? '<span class="tag tag-promo plan-current">目前</span>' : ''}</div>
-          <div class="plan-body">
-            <div class="plan-name-row"><span class="plan-name">${esc(pl.name)}</span><button class="plan-icon" data-rename="${pl.id}" title="改名" aria-label="改名">✎</button></div>
-            <div class="plan-meta">${esc(pl.label)}</div>
-            <div class="plan-meta muted">共 ${pl.units} 台 · ${pl.prefs.areaUnit === 'ping' ? (pl.prefs.area / PING).toFixed(0) + ' 坪' : Math.round(pl.prefs.area) + ' m²'} · ${pl.prefs.floors} 層 · ${fmtTime(pl.updatedAt)}</div>
-            <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button><button class="try-link" data-copy="${pl.id}">複製格局新增方案</button><button class="plan-icon plan-del" data-del="${pl.id}" title="刪除" aria-label="刪除">🗑</button></div>
-          </div></div>`).join('')}
-        <button class="plan-card plan-new" id="newPlan"><span class="plan-new-plus">＋</span><span class="quick-title">新增方案</span><span class="quick-sub">複製目前方案的格局，試試不同的偏好或套組</span></button>
-      </div>` : `<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`}
+      ${list.length ? `<div class="plan-grid">${list.map(x => (isPlan(x) ? planCard(x) : recCard(x))).join('')}
+        ${plansOnly.length ? '<button class="plan-card plan-new" id="newPlan"><span class="plan-new-plus">＋</span><span class="quick-title">新增方案</span><span class="quick-sub">複製目前方案的格局，試試不同的偏好或套組</span></button>' : ''}
+      </div>` : (pending ? '' : `<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
     </div>`;
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
-    if ($('resumePending')) $('resumePending').onclick = () => go(next.to);
+    el.querySelectorAll('[data-rec]').forEach(b => (b.onclick = () => openRecord(b.dataset.rec, false)));
+    el.querySelectorAll('[data-rec-try]').forEach(b => (b.onclick = () => openRecord(b.dataset.recTry, true)));
+    if ($('resumePending')) $('resumePending').onclick = () => go('needs');
     if ($('dropPending')) $('dropPending').onclick = () => {
       if (!confirm('捨棄這個未完成的規劃？')) return;
-      if (cur) { Object.assign(state, JSON.parse(JSON.stringify(cur.prefs))); state.bundleId = cur.bundleId; }
+      const cur = activePlan();
+      if (cur) { Object.assign(state, JSON.parse(JSON.stringify(cur.prefs))); state.bundleId = cur.bundleId; state.prefsDone = true; }
       else { state.prefsDone = false; state.bundleId = null; }
-      state.newPlanFrom = null; save(); render();
+      state.newPlanFrom = null; state.inProgress = false; save(); render();
     };
     el.querySelectorAll('[data-copy]').forEach(b => (b.onclick = () => startNewPlan(b.dataset.copy)));
     el.querySelectorAll('[data-del]').forEach(b => (b.onclick = () => {
       const pl = store.plans.find(x => x.id === b.dataset.del);
       if (!pl || !confirm(`刪除「${pl.name}」？刪除後無法復原。`)) return;
       store.plans = store.plans.filter(x => x.id !== pl.id);
-      if (store.activeId === pl.id) { store.activeId = store.plans[0] ? store.plans[0].id : null; state.loadedPlanId = null; save(); }
+      if (store.activeId === pl.id) { const nxt = store.plans.find(isPlan); store.activeId = nxt ? nxt.id : null; state.loadedPlanId = null; save(); }
       savePlans(); render();
     }));
     el.querySelectorAll('[data-rename]').forEach(b => (b.onclick = () => {
@@ -554,7 +598,7 @@
       input.onblur = () => done(true);
     }));
     const np = $('newPlan');
-    if (np) np.onclick = () => startNewPlan(store.activeId || (store.plans[0] && store.plans[0].id));
+    if (np) np.onclick = () => startNewPlan((activePlan() || plansOnly[0]).id);
     const sf = $('startFirst');
     if (sf) sf.onclick = () => go('needs');
   }
