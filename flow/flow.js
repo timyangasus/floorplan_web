@@ -873,7 +873,7 @@
     nav.hidden = cur < 0;
     if (cur < 0) return;
     const max = unlocked();
-    const hints = ['填完 3 題就能看推薦', '', '拖曳調整位置，查看訊號覆蓋'];
+    const hints = ['', '', '拖曳調整位置，查看訊號覆蓋'];
     const finished = i => (i === 0 ? state.prefsDone : i === 1 ? !!state.bundleId : false);
     const op = activePlan(), orphanOpen = s.id === 'floorplan' && op && state.loadedPlanId === op.id && !recOf(op);
     nav.innerHTML = FLOW.map((f, i) => {
