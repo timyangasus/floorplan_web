@@ -213,10 +213,10 @@
 
   // ── 1_030 Home size ──
   function renderHomeSize(el) {
-    el.innerHTML = `<div class="page">${qHeader(3, '你家大概長什麼樣子？', '大概就好。之後在 Floor plan 可以用實際平面圖調整。')}
+    el.innerHTML = `<div class="page">${qHeader(3, '你家的空間有多大？', '填寫大約數值即可，進入居家配置後可再依實際平面圖調整。')}
       <div class="q-cols">
         <div class="field-card"><label class="field-label" for="area">室內總面積</label><div class="big-input"><input id="area" type="number" min="10" max="1000" step="1" inputmode="numeric"><span>m²</span></div><p class="muted small" id="ping" style="margin:10px 0 0"></p></div>
-        <div class="field-card"><span class="field-label">樓層數</span><div class="stepper"><button id="minus" aria-label="減少樓層">−</button><output id="floors"></output><button id="plus" aria-label="增加樓層">＋</button></div><div class="house-preview" id="house"></div></div>
+        <div class="field-card"><span class="field-label">樓層數</span><div class="stepper"><button id="minus" aria-label="減少樓層">−</button><output id="floors"></output><button id="plus" aria-label="增加樓層">＋</button></div></div>
         <div class="field-card"><span class="field-label">主機與 Node 之間怎麼連（回程）</span><div class="seg" id="bh"></div><p class="muted small" style="margin:10px 0 0">家裡有預埋網路線就選有線，覆蓋與速度通常較好。</p></div>
         <div class="field-card"><label class="field-label" for="country">購買地區</label><select class="select" id="country"><option value="TW">台灣</option><option value="CN">中國</option><option value="DE">歐洲 · 德國</option><option value="US">美洲 · 美國</option></select><p class="muted small" style="margin:10px 0 0">目前只有台灣有可推薦機種與價表。</p></div>
       </div>
@@ -225,7 +225,6 @@
       $('area').value = state.area;
       $('ping').textContent = `約 ${(state.area / 3.3058).toFixed(1)} 坪 · 每層約 ${(state.area / state.floors).toFixed(0)} m²`;
       $('floors').textContent = state.floors;
-      $('house').innerHTML = Array.from({ length: state.floors }, (_, i) => `<div class="house-floor" style="height:${Math.max(16, 100 / state.floors - 6)}px">${state.floors - i}F</div>`).join('').replace(/^/, '<div style="display:flex;flex-direction:column;gap:4px">') + '</div>';
       $('bh').innerHTML = [['wired', '有線回程'], ['wireless', '無線回程（待驗證）']].map(([v, l]) => `<button class="${state.bh === v ? 'on' : ''}" data-v="${v}">${l}</button>`).join('');
       $('bh').querySelectorAll('button').forEach(b => (b.onclick = () => { state.bh = b.dataset.v; save(); draw(); }));
       $('country').value = state.country;
