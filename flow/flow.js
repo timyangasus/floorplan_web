@@ -20,7 +20,9 @@
   }
   function results() {
     const c = E.catalog(), u = engineInput();
-    return { u, models: E.modelRank(c, u), bundles: E.calculate(c, u).rows };
+    const calc = E.calculate(c, u);
+    // bundles = Top 10 shown in the list; allBundles = every valid combination (for trying any ranked model).
+    return { u, models: E.modelRank(c, u), bundles: calc.rows, allBundles: calc.all };
   }
   const PING = 3.3058; // 1 坪 = 3.3058 m²
   const areaText = m2 => (state.areaUnit === 'ping' ? `${(m2 / PING).toFixed(1).replace(/\.0$/, '')} 坪` : `${Math.round(m2)} m²`);
@@ -257,7 +259,8 @@
 
   // ── 2_010 Results ──
   function renderResults(el) {
-    const { u, models, bundles } = results();
+    const { u, models, bundles, allBundles } = results();
+    const bestFor = id => allBundles.find(b => b.r.id === id) || null;
     const tried = state.newPlanFrom ? new Map() : new Map(triedPlans(prefsOf()).map(x => [x.bundleId, x]));
     const tryLabel = b => (b && tried.has(bundleKey(b)) ? '開啟方案' : '在我家試擺');
     if (u.country === 'TW') recordRecommendation(models, bundles);
@@ -274,7 +277,7 @@
         <div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div>
         <div class="gauge-body"><div class="gauge-photo">${m.active ? '<span class="tag tag-promo photo-tag">本期主打</span>' : ''}<img src="${productImg(m.id)}" alt="${esc(m.id)}" loading="lazy" onerror="this.style.visibility='hidden'"></div>
         <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>最少 ${m.N} 台</li><li>${m.m.ai ? 'AI 核心' : '一般核心'}</li></ul></div>
-        <div class="gauge-foot"><div class="gauge-actions">${bundles.some(b => b.r.id === m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">${tryLabel(bundles.find(b => b.r.id === m.id))}</button>` : ''}${cartBtn(`data-buy-model="${esc(m.id)}"`)}</div><div class="gauge-badges">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div></div></div>`).join('')}</div>
+        <div class="gauge-foot"><div class="gauge-actions">${bestFor(m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">${tryLabel(bestFor(m.id))}</button>` : ''}${cartBtn(`data-buy-model="${esc(m.id)}"`)}</div><div class="gauge-badges">${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div></div></div>`).join('')}</div>
         ${rest.length ? `<div class="more-models">${rest.map((m, i) => `<button data-model="${esc(m.id)}">${rankTag(i + 5)}<span>${esc(m.id)}</span></button>`).join('')}</div>` : ''}` : '<div class="card empty">沒有符合目前品牌／定位與空間條件的機種，請調整條件。</div>'}
 
       <div class="section-head"><div><h2>推薦配置套組 · Top ${bundles.length}</h2><div class="muted small">主機＋Node 的組合與最少台數；選一組放進你家試擺</div></div></div>
@@ -295,7 +298,7 @@
     $('sort').querySelectorAll('button').forEach(b => (b.onclick = () => { state.sort = b.dataset.v; save(); render(); }));
     el.querySelectorAll('[data-model]').forEach(c => (c.onclick = () => { state.modelId = c.dataset.model; save(); go('model'); }));
     el.querySelectorAll('[data-try]').forEach(b => (b.onclick = () => { pickBundle(bundles[+b.dataset.try]); go('floorplan'); }));
-    el.querySelectorAll('[data-try-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); pickBundle(bundles.find(x => x.r.id === b.dataset.tryModel)); go('floorplan'); }));
+    el.querySelectorAll('[data-try-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); pickBundle(bestFor(b.dataset.tryModel)); go('floorplan'); }));
     el.querySelectorAll('[data-buy-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); setBuy('model', b.dataset.buyModel); go('exit'); }));
     el.querySelectorAll('[data-buy-bundle]').forEach(b => (b.onclick = () => { setBuy('bundle', bundleKey(bundles[+b.dataset.buyBundle])); go('exit'); }));
     const cta = $('cta');
@@ -306,13 +309,13 @@
 
   // ── 2_020 Model detail ──
   function renderModel(el) {
-    const { u, models, bundles } = results();
+    const { u, models, bundles, allBundles } = results();
     const c = E.catalog();
     const m = c.products.find(p => p.id === state.modelId) || (models[0] && models[0].m);
     if (!m) { el.innerHTML = '<div class="page"><div class="card empty">尚未選擇機種</div></div>'; return; }
     const rankRow = models.find(x => x.id === m.id);
     const x = E.ability(m), d = E.demands(x);
-    const best = bundles.find(b => b.r.id === m.id) || bundles.find(b => b.n.id === m.id && b.N > 1);
+    const best = allBundles.find(b => b.r.id === m.id) || allBundles.find(b => b.n.id === m.id && b.N > 1);
     el.innerHTML = `<div class="page">
       <button class="link-btn" id="back">‹ 推薦結果</button>
       <div class="res-head" style="margin-top:14px"><div><div class="eyebrow">${esc(m.series)} · ${esc(E.tierNames[m.positioning] || '')}</div><h1 class="hero-title" style="font-size:56px;margin-top:6px">${esc(m.id)}</h1>
@@ -337,12 +340,12 @@
   // Temporary destination until per-model product URLs are available.
   const ASUS_STORE = 'https://www.asus.com/tw/store/networking-iot-servers/';
   function renderExit(el) {
-    const { bundles, models } = results();
+    const { bundles, models, allBundles } = results();
     const buy = state.buy || {};
     const bundle = buy.kind === 'bundle' ? bundles.find(x => bundleKey(x) === buy.id) : null;
     const model = buy.kind === 'model' ? buy.id : null;
     const items = bundle ? (bundle.N > 1 && bundle.n.id !== bundle.r.id ? [[bundle.r.id, 1], [bundle.n.id, bundle.N - 1]] : [[bundle.r.id, bundle.N]]) : model ? [[model, (models.find(x => x.id === model) || {}).N || 1]] : [];
-    const planBundle = bundle || (model && bundles.find(x => x.r.id === model)) || bundles[0];
+    const planBundle = bundle || (model && allBundles.find(x => x.r.id === model)) || bundles[0];
     el.innerHTML = `<div class="page"><div class="exit-wrap">
       <div class="exit-ico">${I.cart}</div>
       <h1 class="page-title">${items.length ? '你選的配置' : '前往 ASUS 線上購物'}</h1>
@@ -638,11 +641,11 @@
   }
 
   function renderFloorplan(el) {
-    const { u, bundles } = results();
+    const { u, bundles, allBundles } = results();
     const blank = state.seededKey === 'blank' && !state.bundleId;
     try { AUTH_KEYS.forEach(k => localStorage.setItem(k, 'standalone')); } catch (e) { /* ignore */ }
     let plan = null, fresh = false, note = '';
-    const b = bundles.find(x => bundleKey(x) === state.bundleId) || null;
+    const b = allBundles.find(x => bundleKey(x) === state.bundleId) || null;
     if (!blank) {
       capturePlan();
       const cur = activePlan();
