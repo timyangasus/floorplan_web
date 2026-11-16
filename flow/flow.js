@@ -272,18 +272,18 @@
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="seg" id="sort"><button data-v="balanced" class="${state.sort !== 'cost' ? 'on' : ''}">平衡推薦</button><button data-v="cost" class="${state.sort === 'cost' ? 'on' : ''}">較低花費優先</button></div></div></div>
       ${u.country !== 'TW' ? '<div class="card empty" style="margin-top:24px">此地區尚未建立價表與可推薦機種，請改選台灣。</div>' : `
       <div class="section-head"><div><h2>推薦機種排行</h2><div class="muted small">每型號一筆 · 已納入你的面積與樓層 · 點卡片看詳情</div></div></div>
-      ${top4.length ? `<div class="gauges">${top4.map((m, i) => `<div class="gauge-card${i === 0 ? ' featured' : ''}" data-model="${esc(m.id)}">${i === 0 ? '<div class="feature-ribbon">★ 最推薦給你</div>' : ''}
-        <div class="gauge-top"><img class="gauge-img" src="${productImg(m.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><div class="gauge-title"><div class="gauge-name">${esc(m.id)}</div><div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div></div><span class="rank-badge">#${i + 1}</span></div>
+      ${top4.length ? `<div class="gauges">${top4.map((m, i) => `<div class="gauge-card" data-model="${esc(m.id)}">
+        <div class="gauge-top"><img class="gauge-img" src="${productImg(m.id)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><div class="gauge-title"><div class="gauge-name">${esc(m.id)}</div><div class="gauge-sub">${esc(m.m.series)} · ${esc(E.tierNames[m.m.positioning] || E.tierNames['未設定'])}</div></div><span class="tag ${i === 0 ? 'tag-rank1' : 'tag-rank'}">推薦 ${i + 1}</span></div>
         <div class="gauge-body"><div class="ring">${ring(m.Z, ringColors[i])}<div class="ring-val"><b>${m.Z.toFixed(0)}</b><span>綜合分</span></div></div>
         <ul class="gauge-facts"><li>WiFi ${m.m.wifi}</li><li>${m.m.bands} 頻段</li><li>最少 ${m.N} 台</li><li>${m.m.ai ? '搭載 AI 核心' : '一般核心'}</li></ul></div>
-        <div>${m.active ? '<span class="badge promo">本期主打</span>' : ''}${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div>${i === 0 && bundles.some(b => b.r.id === m.id) ? `<button class="btn btn-sm feature-try" data-try-model="${esc(m.id)}">選這台 · 在我家試擺 →</button>` : ''}</div>`).join('')}</div>
+        <div>${m.active ? '<span class="tag tag-promo">本期主打</span>' : ''}${m.m.special !== '無' ? `<span class="badge">${esc(m.m.special)}</span>` : ''}</div>${bundles.some(b => b.r.id === m.id) ? `<button class="try-link" data-try-model="${esc(m.id)}">在我家試擺</button>` : ''}</div>`).join('')}</div>
         ${rest.length ? `<div class="more-models">${rest.map((m, i) => `<button data-model="${esc(m.id)}">#${i + 5} ${esc(m.id)}</button>`).join('')}</div>` : ''}` : '<div class="card empty">沒有符合目前品牌／定位與空間條件的機種，請調整條件。</div>'}
 
       <div class="section-head"><div><h2>推薦配置套組 · Top ${bundles.length}</h2><div class="muted small">主機＋Node 的組合與最少台數；選一組放進你家試擺</div></div></div>
-      ${bundles.length ? `<div class="bundles">${bundles.map((b, i) => `<div class="bundle${i === 0 ? ' featured' : ''}">
+      ${bundles.length ? `<div class="bundles">${bundles.map((b, i) => `<div class="bundle">
         <div class="bundle-rank">${String(i + 1).padStart(2, '0')}</div>
-        <div><div class="bundle-name">${esc(b.r.id)}${b.N > 1 ? ` <span class="muted">＋ ${esc(b.n.id)}</span>` : ''}${i === 0 ? ' <span class="best-tag">最推薦</span>' : ''}</div>
-          <div class="bundle-meta"><span>${b.N === 1 ? '單機' : 'AiMesh'}</span><span>WiFi ${b.r.wifi}</span><span>各樓層 ${b.floorUnits.join(' / ')} 台</span><span>${esc(E.tierNames[b.r.positioning] || '')}</span>${b.boost || b.reserved ? '<span class="accent">本期主打</span>' : ''}</div>
+        <div><div class="bundle-name">${esc(b.r.id)}${b.N > 1 ? ` <span class="muted">＋ ${esc(b.n.id)}</span>` : ''}${i === 0 ? ' <span class="tag tag-rank1">最推薦</span>' : ''}</div>
+          <div class="bundle-meta"><span>${b.N === 1 ? '單機' : 'AiMesh'}</span><span>WiFi ${b.r.wifi}</span><span>各樓層 ${b.floorUnits.join(' / ')} 台</span><span>${esc(E.tierNames[b.r.positioning] || '')}</span>${b.boost || b.reserved ? '<span class="tag tag-promo">本期主打</span>' : ''}</div>
           <div class="bundle-bar"><span style="width:${Math.max(4, Math.min(100, b.Z))}%"></span></div></div>
         <div class="bundle-units"><b>${b.N}</b><small>台</small><div>${b.N > 1 ? `主機 1 ＋ Node ${b.N - 1}` : '主機 1'}</div></div>
         <button class="btn btn-sm" data-try="${i}">在我家試擺</button>
