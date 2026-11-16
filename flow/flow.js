@@ -108,16 +108,39 @@
           ${resume ? `<div class="resume"><span class="quick-ico">${resume.key === 'plan' ? I.plan : I.rank}</span><div><div class="quick-title">繼續上次進度</div><div class="quick-sub">已完成偏好設定${state.bundleId ? '，並選了配置套組' : ''}</div></div><button class="btn btn-sm" id="resume">前往${resume.label}</button></div>` : ''}
         </div>
       </div>
-      <div class="home-strip"><div class="eyebrow">能幫你做什麼</div></div>
-      <div class="journey">
-        <div class="journey-item"><div class="card-title">${I.prefs} 主要用途</div><div class="num">6<small>種情境</small></div><p>全屋覆蓋、遊戲、居家工作、影音、直播、智慧家庭</p></div>
-        <div class="journey-item"><div class="card-title">${I.smart} 我家的樣子</div><div class="num">1–6<small>層樓</small></div><p>面積與樓層決定最少需要幾台</p></div>
-        <div class="journey-item"><div class="card-title">${I.rank} 推薦排行</div><div class="num">Top 10<small>套組</small></div><p>機種排行與主機＋Node 的配置套組</p></div>
-        <div class="journey-item"><div class="card-title">${I.plan} 居家配置</div><div class="num">2D/3D<small>覆蓋</small></div><p>把推薦套組放進平面圖，看訊號覆蓋與 Mesh 路徑</p></div>
-      </div>
+      <div class="home-strip"><div><div class="eyebrow">能幫你做什麼</div><h2 class="promo-heading">從挑機種到擺位置，一次搞定</h2></div></div>
+      ${promoBanners()}
     </div>`;
     $('start').onclick = () => go('needs');
     if (resume) $('resume').onclick = () => go(resume.to);
+    el.querySelectorAll('[data-promo]').forEach(b => (b.onclick = () => go('needs')));
+  }
+
+  // Home "能幫你做什麼" — illustrated promo banners (bento layout). All banners start the flow at step 1.
+  function promoBanners() {
+    const usage = [I.wifi, I.game, I.work, I.stream, I.live, I.smart];
+    const orbit = usage.map((ico, i) => {
+      const a = (i / usage.length) * Math.PI * 2 - Math.PI / 2, x = 50 + 38 * Math.cos(a), y = 50 + 38 * Math.sin(a);
+      return `<span class="orbit-ico" style="left:${x}%;top:${y}%;animation-delay:${-i * .5}s">${ico}</span>`;
+    }).join('');
+    return `<div class="promo">
+      <button class="promo-card promo-a" data-promo>
+        <div class="promo-text"><span class="promo-kicker">STEP 1 · 偏好設定</span><h3>6 種生活情境<br>挑出最適合你的</h3><p>遊戲、居家工作、追劇、直播…選你最常用的，我們幫你算。</p><span class="promo-cta">開始規劃 →</span></div>
+        <div class="promo-art art-orbit"><svg class="orbit-house" viewBox="0 0 120 120"><path d="M20 58 60 24l40 34v40a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4z" fill="#fff" fill-opacity=".95"/><path d="M48 102V76h24v26" fill="#d6e8ff"/><g fill="none" stroke="#1982ff" stroke-width="4" stroke-linecap="round"><path class="wave w1" d="M46 60a20 20 0 0 1 28 0"/><path class="wave w2" d="M38 52a31 31 0 0 1 44 0"/></g><circle cx="60" cy="67" r="4" fill="#1982ff"/></svg>${orbit}</div>
+      </button>
+      <button class="promo-card promo-b" data-promo>
+        <div class="promo-text"><span class="promo-kicker">STEP 1 · 我家的樣子</span><h3>1–6 層樓都能算</h3><p>坪數 × 樓層，估出最少要幾台。</p></div>
+        <div class="promo-art"><svg viewBox="0 0 140 110"><g class="floor f3"><path d="M70 14 120 34 70 54 20 34z" fill="#fff"/><path d="M20 34v6l50 20v-6zM120 34v6L70 60v-6z" fill="#9fdcc9"/></g><g class="floor f2"><path d="M70 38 120 58 70 78 20 58z" fill="#fff"/><path d="M20 58v6l50 20v-6zM120 58v6L70 84v-6z" fill="#9fdcc9"/></g><g class="floor f1"><path d="M70 62 120 82 70 102 20 82z" fill="#fff"/><path d="M20 82v6l50 20v-6zM120 82v6l-50 20v-6z" fill="#9fdcc9"/></g><circle class="ping" cx="70" cy="34" r="5" fill="#13a37f"/><circle class="ping p2" cx="70" cy="58" r="5" fill="#13a37f"/><circle class="ping p3" cx="70" cy="82" r="5" fill="#13a37f"/></svg></div>
+      </button>
+      <button class="promo-card promo-c" data-promo>
+        <div class="promo-text"><span class="promo-kicker">STEP 2 · 推薦結果</span><h3>Top 10 配置套組</h3><p>主機＋Node 怎麼搭、要幾台，一次排好。</p></div>
+        <div class="promo-art"><svg viewBox="0 0 140 110"><rect x="12" y="62" width="36" height="40" rx="4" fill="#fff" fill-opacity=".8"/><rect x="52" y="44" width="36" height="58" rx="4" fill="#fff"/><rect x="92" y="74" width="36" height="28" rx="4" fill="#fff" fill-opacity=".7"/><text x="30" y="88" text-anchor="middle" font-size="16" fill="#e08a2b" font-weight="600">2</text><text x="70" y="80" text-anchor="middle" font-size="20" fill="#e08a2b" font-weight="700">1</text><text x="110" y="94" text-anchor="middle" font-size="14" fill="#e08a2b" font-weight="600">3</text><g class="trophy"><rect x="54" y="26" width="32" height="12" rx="3" fill="#2b2f36"/><path d="M60 26 56 16M80 26l4-10" stroke="#2b2f36" stroke-width="2.5" stroke-linecap="round"/><circle cx="62" cy="32" r="1.6" fill="#7ee0a1"/><circle cx="68" cy="32" r="1.6" fill="#7ee0a1"/></g><path class="spark s1" d="M100 18l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff"/><path class="spark s2" d="M34 34l1.5 3.5 3.5 1.5-3.5 1.5L34 44l-1.5-3.5L29 39l3.5-1.5z" fill="#fff"/></svg></div>
+      </button>
+      <button class="promo-card promo-d" data-promo>
+        <div class="promo-text"><span class="promo-kicker">STEP 3 · 居家配置</span><h3>把推薦放進你家</h3><p>推薦套組自動擺進平面圖，2D／3D 覆蓋一眼看出死角。</p><span class="promo-cta light">開始規劃 →</span></div>
+        <div class="promo-art art-plan"><svg viewBox="0 0 240 130"><defs><radialGradient id="heat"><stop offset="0" stop-color="#4be3a0" stop-opacity=".95"/><stop offset=".55" stop-color="#ffd25e" stop-opacity=".55"/><stop offset="1" stop-color="#ff7a7a" stop-opacity="0"/></radialGradient></defs><rect x="10" y="10" width="220" height="110" rx="6" fill="#fff" fill-opacity=".1" stroke="#fff" stroke-opacity=".85" stroke-width="3"/><path d="M110 10v62M10 66h60M110 72h70M180 72v48" stroke="#fff" stroke-opacity=".7" stroke-width="2.5"/><circle class="heat h1" cx="62" cy="40" r="56" fill="url(#heat)"/><circle class="heat h2" cx="170" cy="88" r="56" fill="url(#heat)"/><g class="node"><circle cx="62" cy="40" r="9" fill="#fff"/><circle cx="62" cy="40" r="4" fill="#5b5bd6"/></g><g class="node"><circle cx="170" cy="88" r="9" fill="#fff"/><circle cx="170" cy="88" r="4" fill="#5b5bd6"/></g><path class="mesh" d="M70 44 162 84" stroke="#fff" stroke-width="2" stroke-dasharray="5 6"/></svg></div>
+      </button>
+    </div>`;
   }
 
   function qHeader(step, title, sub) {
