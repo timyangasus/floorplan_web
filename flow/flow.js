@@ -31,13 +31,14 @@
 
   // ── Icons ──
   const I = {
-    plans: '<svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M8 13.5 12 10.5l4 3M9.5 12.4V16h5v-3.6"/></svg>',
+    plans: '<svg viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16.5" rx="2"/><path d="M9 4.5V3.5h6v1"/><path d="M8.5 10l1.3 1.3L12 9M8.5 15l1.3 1.3L12 14M14 10.3h2.5M14 15.3h2.5"/></svg>',
     home: '<svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v8.5a.5.5 0 0 1-.5.5H15v-6H9v6H4.5a.5.5 0 0 1-.5-.5z"/></svg>',
     prefs: '<svg viewBox="0 0 24 24"><path d="M6 4v6M6 14v6M12 4v2M12 10v10M18 4v10M18 18v2M4 12h4M10 8h4M16 16h4"/></svg>',
     rank: '<svg viewBox="0 0 24 24"><path d="M5 20v-6M12 20V6M19 20v-9M3 20h18"/></svg>',
     plan: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 11h7v8.5M14 4.5v6h6.5M10.5 14H8"/></svg>',
     admin: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>',
     help: '<svg viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2M4 14v3a2 2 0 0 0 2 2h1v-6H6a2 2 0 0 0-2 2zM20 14v3a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2z"/></svg>',
+    account: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3.2"/><path d="M6.2 18.4a6.5 6.5 0 0 1 11.6 0"/></svg>',
     wifi: '<svg viewBox="0 0 24 24"><path d="M2.5 9a14 14 0 0 1 19 0M5.5 12.5a9.5 9.5 0 0 1 13 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.2" r=".9"/></svg>',
     game: '<svg viewBox="0 0 24 24"><path d="M7 9h10a4 4 0 0 1 4 4v1.5a2.5 2.5 0 0 1-4.6 1.4L15 14H9l-1.4 1.9A2.5 2.5 0 0 1 3 14.5V13a4 4 0 0 1 4-4zM8 11.5v3M6.5 13h3M15.5 12.5h.01M17.5 14h.01"/></svg>',
     work: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 17v3"/></svg>',
@@ -64,7 +65,7 @@
 
   // ── Screens ──
   const SCREENS = [
-    { id: 'home', code: '0_010', rail: 'home', description: '首頁：大字標題＋「開始規劃」主按鈕，有方案時顯示最近的方案，下方為功能 banner', render: renderHome },
+    { id: 'home', code: '0_010', rail: 'home', description: '首頁：大字標題＋「開始規劃」主按鈕（有進度時下方可繼續），下方為功能 banner', render: renderHome },
     { id: 'needs', code: '1_010', rail: 'prefs', description: '偏好 1/3：主要用途（可複選，標記最重要的一項）', render: renderNeeds },
     { id: 'care', code: '1_020', rail: 'prefs', description: '偏好 2/3：還在意什麼、外觀、品牌與產品定位', render: renderCare },
     { id: 'home-size', code: '1_030', rail: 'prefs', description: '偏好 3/3：我家的樣子（面積、樓層、回程、地區）', render: renderHomeSize },
@@ -97,7 +98,7 @@
       + `<button class="rail-btn${active === 'plans' ? ' active' : ''}" data-to="plans" data-tip="我的規劃" aria-label="我的規劃">${I.plans}</button>`
       + '<div class="rail-spacer"></div>'
       + `<button class="rail-btn" data-href="router_recommendation_wireframe%201.html" data-tip="後台：機種資料與權重（另開）" aria-label="後台">${I.admin}</button>`
-      + `<button class="rail-btn" data-tip="客服支援（示意）" aria-label="客服支援">${I.help}</button>`;
+      + `<button class="rail-btn" data-tip="帳號（示意）" aria-label="帳號">${I.account}</button>`;
     $('rail').querySelectorAll('[data-to]').forEach(b => (b.onclick = () => go(b.dataset.to)));
     $('rail').querySelectorAll('[data-href]').forEach(b => (b.onclick = () => window.open(b.dataset.href, '_blank')));
   }
@@ -105,8 +106,7 @@
   // ── 0_010 Home ──
   function renderHome(el) {
     const max = unlocked();
-    const recent = store.plans.slice(0, 3);
-    const resume = !recent.length && state.prefsDone ? FLOW[max] : null;
+    const resume = state.prefsDone ? FLOW[max] : null;
     el.innerHTML = `<div class="page">
       <section class="hero">
         <h1 class="hero-title">嗨，<br>來規劃你家的 WiFi</h1>
@@ -115,7 +115,6 @@
           <div>放進你家的平面圖 <span class="muted">· 模擬每個房間的訊號覆蓋</span></div>
         </div>
         <div class="hero-cta"><button class="btn btn-xl" id="start">開始規劃 <span class="btn-arrow">→</span></button><span class="muted">約 3 分鐘 · 免登入</span></div>
-        ${recent.length ? `<div class="recent"><div class="recent-head"><span class="eyebrow">最近的方案</span><button class="link-btn" data-to="plans">查看全部 ›</button></div><div class="recent-list">${recent.map(pl => `<button class="recent-item" data-open="${pl.id}"><span class="recent-thumb">${planThumb(pl)}</span><span class="recent-body"><span class="quick-title">${esc(pl.name)}</span><span class="quick-sub">${esc(pl.label)} · ${fmtTime(pl.updatedAt)}</span></span></button>`).join('')}</div></div>` : ''}
         ${resume ? `<div class="resume"><span class="quick-ico">${resume.key === 'plan' ? I.plan : I.rank}</span><div><div class="quick-title">繼續上次進度</div><div class="quick-sub">已完成偏好設定${state.bundleId ? '，並選了配置套組' : ''}</div></div><button class="btn btn-ghost btn-sm" id="resume">前往${resume.label}</button></div>` : ''}
       </section>
       <div class="home-strip"><div><div class="eyebrow">能幫你做什麼</div><h2 class="promo-heading">從挑機種到擺位置，一次搞定</h2></div></div>
@@ -123,8 +122,6 @@
     </div>`;
     $('start').onclick = () => go('needs');
     if (resume) $('resume').onclick = () => go(resume.to);
-    el.querySelectorAll('.recent [data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
-    el.querySelectorAll('.recent [data-to]').forEach(b => (b.onclick = () => go(b.dataset.to)));
     el.querySelectorAll('[data-promo]').forEach(b => (b.onclick = () => go('needs')));
   }
 
