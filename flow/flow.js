@@ -591,7 +591,7 @@
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
         <p class="page-sub">${groups.length ? counts + '；點推薦紀錄展開從它試擺的方案' : '還沒有紀錄。看完推薦結果或進入居家配置後，會自動存在這裡。'}</p></div>
-</div>
+        ${groups.length ? '<button class="btn btn-sm btn-outline" id="startNew">開始規劃 →</button>' : ''}</div>
       ${groups.length ? `<div class="grp-list">${groups.map(groupBlock).join('')}</div>` : (`<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
     </div>`;
     el.querySelectorAll('[data-toggle]').forEach(h => (h.onclick = e => {
@@ -628,6 +628,13 @@
     }));
     const sf = $('startFirst');
     if (sf) sf.onclick = () => go('needs');
+    // A fresh round of planning: start from default preferences (saved records/plans stay as they are).
+    if ($('startNew')) $('startNew').onclick = () => {
+      const d = initial();
+      PREF_KEYS.forEach(k => (state[k] = d[k]));
+      Object.assign(state, { prefsDone: false, bundleId: null, newPlanFrom: null, inProgress: false });
+      save(); go('needs');
+    };
   }
 
   function renderFloorplan(el) {
