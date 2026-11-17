@@ -724,3 +724,19 @@ svg { display: block; }
 .swap-tabs { padding: 12px 16px 0; }
 .swap-tabs .seg { display: flex; }
 .swap-tabs .seg button { flex: 1; }
+
+/* Home: two large choice buttons with a short explanation */
+.hero-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 300px)); gap: 18px; margin: 32px 0 8px; }
+.choice { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 200px; padding: 24px 24px 22px; border-radius: 20px; color: #fff; text-align: left; transition: transform .15s, box-shadow .15s; }
+.choice:hover { transform: translateY(-2px); }
+.choice-rec { background: linear-gradient(140deg, #4aa3ff, #1663f0); box-shadow: 0 10px 26px rgba(25, 130, 255, .3); }
+.choice-rec:hover { box-shadow: 0 14px 30px rgba(25, 130, 255, .38); }
+.choice-plan { background: linear-gradient(140deg, #36d6c3, #0e9f9a); box-shadow: 0 10px 26px rgba(14, 159, 154, .3); }
+.choice-plan:hover { box-shadow: 0 14px 30px rgba(14, 159, 154, .38); }
+.choice-ico { width: 44px; height: 44px; border-radius: 12px; background: rgba(255, 255, 255, .2); display: grid; place-items: center; margin-bottom: 6px; }
+.choice-ico svg { width: 24px; height: 24px; fill: none; stroke: #fff; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.choice-title { font-size: 22px; font-weight: 600; }
+.choice-desc { font-size: 14px; line-height: 1.6; opacity: .92; padding-right: 28px; }
+.choice-go { position: absolute; right: 22px; bottom: 20px; font-size: 22px; transition: transform .2s; }
+.choice:hover .choice-go { transform: translateX(4px); }
+@media (max-width: 640px) { .hero-choices { grid-template-columns: 1fr; } .choice { min-height: 0; } }
