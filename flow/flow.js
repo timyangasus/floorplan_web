@@ -69,9 +69,9 @@
   const SCREENS = [
     { id: 'home', code: '0_010', rail: 'home', description: '首頁：大字標題＋「推薦機種」主按鈕、「居家配置」直接進平面圖，下方為功能 banner（未完成的進度在「我的規劃」）', render: renderHome },
     { id: 'needs', code: '1_010', rail: 'prefs', description: '偏好 1/3：主要用途（可複選，標記最重要的一項）', render: renderNeeds },
-    { id: 'care', code: '1_020', rail: 'prefs', description: '偏好 2/3：還在意什麼、外觀、品牌與產品定位', render: renderCare },
+    { id: 'care', code: '1_020', rail: 'prefs', description: '偏好 2/3：還在意什麼、外觀偏好、旅行機種', render: renderCare },
     { id: 'home-size', code: '1_030', rail: 'prefs', description: '偏好 3/3：我家的樣子（面積、樓層、回程、地區）', render: renderHomeSize },
-    { id: 'results', code: '2_010', rail: 'rank', description: '推薦結果：機種排行＋配置套組 Top 10，看到即完成；可在我家試擺（約 70%）或購物車前往購買（約 30%）', render: renderResults },
+    { id: 'results', code: '2_010', rail: 'rank', description: '推薦結果：品牌／產品定位快速篩選＋機種排行＋配置套組，看到即完成；可在我家試擺（約 70%）或購物車前往購買（約 30%）', render: renderResults },
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
     { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；「試其他套組」回推薦結果另選，「重置擺放」讓機器回預設位置', render: renderFloorplan },
@@ -184,8 +184,6 @@
       <div class="q-foot"><button class="link-btn" id="back">‹ 上一步</button><button class="btn" id="next">下一步</button></div></div>`;
     const items = [
       ...E.secondaryNames.map((label, i) => ({ key: 's' + i, label, on: () => state.s.includes(i), toggle: () => { state.s = state.s.includes(i) ? state.s.filter(x => x !== i) : [...state.s, i].sort(); if (i === 4) state.styles = state.s.includes(4) ? ['quiet'] : []; } })),
-      { key: 'brand', label: '指定品牌／系列', on: () => state.brandOn, toggle: () => { state.brandOn = !state.brandOn; state.brands = state.brandOn ? ['ASUS'] : []; } },
-      { key: 'tier', label: '指定產品定位', on: () => state.tierOn, toggle: () => { state.tierOn = !state.tierOn; state.tiers = state.tierOn ? ['中階'] : []; /* default 均衡選擇 (middle tier) */ } },
       { key: 'travel', label: '也看旅行機種', on: () => state.includeTravel, toggle: () => { state.includeTravel = !state.includeTravel; } },
     ];
     const opt = (group, v, label, on, sub) => `<button class="chip${on ? ' on' : ''}" data-g="${group}" data-v="${v}">${label}${sub ? `<span class="chip-sub">${sub}</span>` : ''}</button>`;
@@ -194,8 +192,6 @@
       $('sec').innerHTML = items.map(it => `<button class="chip${it.on() ? ' on' : ''}" data-k="${it.key}">${it.on() ? '✓ ' : ''}${it.label}</button>`).join('');
       const panels = [];
       if (state.s.includes(4)) panels.push(`<div class="subopt" data-p="style"><span class="subopt-label">外觀偏好</span><div class="chips">${opt('style', 'quiet', '低調內置天線', state.styles.includes('quiet'))}${opt('style', 'rgb', 'RGB 燈效', state.styles.includes('rgb'))}</div></div>`);
-      if (state.brandOn) panels.push(`<div class="subopt" data-p="brand"><span class="subopt-label">品牌／系列</span><div class="chips">${['ASUS', 'ROG', 'TUF'].map(v => opt('brand', v, v, state.brands.includes(v))).join('')}</div></div>`);
-      if (state.tierOn) panels.push(`<div class="subopt" data-p="tier"><span class="subopt-label">產品定位</span><div class="chips">${['入門', '中階', '高階'].map(v => opt('tier', v, E.tierNames[v], state.tiers.includes(v), E.tierDescriptions[v])).join('')}</div></div>`);
       $('subopts').innerHTML = panels.join('');
       $('subopts').querySelectorAll('[data-p]').forEach(p => p.classList.toggle('still', shown.has(p.dataset.p)));
       shown = new Set([...$('subopts').querySelectorAll('[data-p]')].map(p => p.dataset.p));
@@ -203,13 +199,8 @@
       $('subopts').querySelectorAll('[data-g]').forEach(b => (b.onclick = () => {
         const v = b.dataset.v;
         // Sub-options start with the first one picked; clearing them all unticks the parent item.
-        const key = { style: 'styles', brand: 'brands', tier: 'tiers' }[b.dataset.g];
-        if (key === 'tiers') state.tiers = state.tiers.includes(v) ? [] : [v]; // 產品定位: single choice
-        else state[key] = state[key].includes(v) ? state[key].filter(x => x !== v) : [...state[key], v];
-        if (!state[key].length) {
-          if (key === 'styles') state.s = state.s.filter(x => x !== 4);
-          else state[key === 'brands' ? 'brandOn' : 'tierOn'] = false;
-        }
+        state.styles = state.styles.includes(v) ? state.styles.filter(x => x !== v) : [...state.styles, v];
+        if (!state.styles.length) state.s = state.s.filter(x => x !== 4);
         save(); draw();
       }));
     };
@@ -269,10 +260,16 @@
     if (state.inProgress) { state.inProgress = false; save(); }
     const top3 = models.slice(0, 3), rest = models.slice(3);
     const cfgText = b => `${esc(b.r.id)} × 1${b.N > 1 ? ` ＋ ${esc(b.n.id)} × ${b.N - 1}` : ''}<span class="muted">　共 ${b.N} 台</span>`;
-    const tags = [u.p.map(i => E.primaryNames[i] + (i === u.top && u.p.length > 1 ? '★' : '')).join('、'), ...u.s.map(i => E.secondaryNames[i]), areaText(u.area), `${u.floors} 層`, u.bh === 'wired' ? '有線回程' : '無線回程', state.brands.length ? '品牌：' + state.brands.join('／') : null, state.tiers.length ? '定位：' + state.tiers.map(t => E.tierNames[t]).join('／') : null].filter(Boolean);
+    const tags = [u.p.map(i => E.primaryNames[i] + (i === u.top && u.p.length > 1 ? '★' : '')).join('、'), ...u.s.map(i => E.secondaryNames[i]), areaText(u.area), `${u.floors} 層`, u.bh === 'wired' ? '有線回程' : '無線回程'].filter(Boolean);
+    const fchip = (g, v, label, on) => `<button class="chip${on ? ' on' : ''}" data-f="${g}" data-v="${v}">${label}</button>`;
+    const filters = `<div class="res-filters">
+        <div class="res-filter"><span class="res-filter-label">品牌／系列</span><div class="chips">${fchip('brand', '', '全部', !state.brands.length)}${['ASUS', 'ROG', 'TUF'].map(v => fchip('brand', v, v, state.brands.includes(v))).join('')}</div></div>
+        <div class="res-filter"><span class="res-filter-label">產品定位</span><div class="chips">${fchip('tier', '', '全部', !state.tiers.length)}${['入門', '中階', '高階'].map(v => fchip('tier', v, E.tierNames[v], state.tiers.includes(v))).join('')}</div></div>
+      </div>`;
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">推薦結果</div><div class="title-row"><h1 class="page-title">這些機種最適合你家</h1></div><div class="summary-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}<button class="link-btn tags-edit" id="edit">修改條件</button></div></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="seg" id="sort"><button data-v="balanced" class="${state.sort !== 'cost' ? 'on' : ''}">平衡推薦</button><button data-v="cost" class="${state.sort === 'cost' ? 'on' : ''}">較低花費優先</button></div></div></div>
+      ${filters}
       ${u.country !== 'TW' ? '<div class="card empty" style="margin-top:24px">此地區尚未建立價表與可推薦機種，請改選台灣。</div>' : `
       <div class="section-head"><div><h2>推薦機種</h2><div class="muted small">依你的需求與空間挑出的前 3 名 · 點卡片看詳情</div></div></div>
       ${top3.length ? `<div class="gauges gauges-3">${top3.map((m, i) => `<div class="gauge-card" data-model="${esc(m.id)}">
@@ -300,6 +297,16 @@
 `}
     </div>`;
     $('edit').onclick = () => go('needs');
+    // Quick filters: brand is multi-select (none or all three = 全部); 產品定位 is single choice.
+    el.querySelectorAll('[data-f]').forEach(b => (b.onclick = () => {
+      const v = b.dataset.v;
+      if (b.dataset.f === 'brand') {
+        state.brands = !v ? [] : state.brands.includes(v) ? state.brands.filter(x => x !== v) : [...state.brands, v];
+        if (state.brands.length === 3) state.brands = [];
+      } else state.tiers = !v || state.tiers.includes(v) ? [] : [v];
+      state.brandOn = !!state.brands.length; state.tierOn = !!state.tiers.length;
+      save(); rerenderKeepScroll();
+    }));
     $('sort').querySelectorAll('button').forEach(b => (b.onclick = () => { state.sort = b.dataset.v; save(); rerenderKeepScroll(); }));
     el.querySelectorAll('[data-model]').forEach(c => (c.onclick = () => { state.modelId = c.dataset.model; save(); go('model'); }));
     el.querySelectorAll('[data-try]').forEach(b => (b.onclick = () => { pickBundle(bundles[+b.dataset.try]); go('floorplan'); }));
@@ -424,7 +431,8 @@
   const isPlan = x => x.kind !== 'rec';
   const hasNewPlans = () => store.plans.some(x => x.createdAt > (store.seenAt || 0));
   const activePlan = () => store.plans.find(x => x.id === store.activeId && isPlan(x)) || null;
-  const prefSig = pr => JSON.stringify(Object.fromEntries(PREF_KEYS.filter(k => k !== 'sort').map(k => [k, pr[k]])));
+  const FILTER_KEYS = ['sort', 'brands', 'tiers', 'brandOn', 'tierOn'];
+  const prefSig = pr => JSON.stringify(Object.fromEntries(PREF_KEYS.filter(k => !FILTER_KEYS.includes(k)).map(k => [k, pr[k]])));
   const samePrefs = (a, b) => prefSig(a) === prefSig(b);
   // Plans tried from the same recommendation (same prefs), keyed by bundle.
   const triedPlans = prefs => store.plans.filter(x => isPlan(x) && samePrefs(x.prefs, prefs));
@@ -437,7 +445,7 @@
     const prefs = prefsOf();
     const top = models.slice(0, 3).map(m => m.id), bundle = bundles[0] ? bundleLabel(bundles[0]) : '';
     const rec = store.plans.find(x => x.kind === 'rec' && samePrefs(x.prefs, prefs));
-    if (rec) { rec.top = top; rec.bundle = bundle; rec.updatedAt = Date.now(); }
+    if (rec) { rec.top = top; rec.bundle = bundle; rec.prefs = prefs; rec.updatedAt = Date.now(); }
     else {
       store.recSeq = (store.recSeq || 0) + 1;
       store.plans.unshift({ id: 'rc_' + Date.now(), kind: 'rec', name: '推薦紀錄 ' + store.recSeq, createdAt: Date.now(), updatedAt: Date.now(), prefs, top, bundle });

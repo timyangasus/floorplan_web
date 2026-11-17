@@ -368,6 +368,10 @@ svg { display: block; }
 
 /* ── 2_0xx Results ── */
 .res-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; }
+.res-filters { display: flex; flex-wrap: wrap; gap: 14px 32px; margin-top: 22px; padding: 16px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+.res-filter { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.res-filter-label { font-size: 13px; color: var(--ink-3); white-space: nowrap; }
+.res-filter .chip { padding: 6px 14px; font-size: 13px; }
 .summary-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .summary-tags { align-items: center; }
 .tags-edit { font-size: 15px; padding-left: 14px; margin-left: 6px; border-left: 1.5px solid var(--line); line-height: 1.6; }
