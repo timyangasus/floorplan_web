@@ -376,6 +376,8 @@
   // ── 3_010 Floor plan (embedded standalone app) ──
   const FP_SRC = 'dist-standalone/floorplan-demo.html';
   const AUTH_KEYS = ['aae_cusid', 'aae_deviceid', 'aae_deviceticket'];
+  // The app opens its 積木拼平面圖 builder when this draft exists and the floor has no walls yet.
+  const BLOCK_KEY = 'floorplan_blockDraft_demo';
 
   function clearFloorplanProject() { try { localStorage.removeItem('standalone_projects'); } catch (e) { /* ignore */ } }
 
@@ -433,8 +435,10 @@
   const prefSig = pr => JSON.stringify(Object.fromEntries(PREF_KEYS.filter(k => !FILTER_KEYS.includes(k)).map(k => [k, pr[k]])));
   const samePrefs = (a, b) => prefSig(a) === prefSig(b);
   // Plans tried from the same recommendation (same prefs), keyed by bundle.
-  const triedPlans = prefs => store.plans.filter(x => isPlan(x) && samePrefs(x.prefs, prefs));
-  const recOf = plan => store.plans.find(x => x.kind === 'rec' && samePrefs(x.prefs, plan.prefs)) || null;
+  const triedPlans = prefs => store.plans.filter(x => isPlan(x) && !x.free && samePrefs(x.prefs, prefs));
+  const recOf = plan => (plan.free ? null : store.plans.find(x => x.kind === 'rec' && samePrefs(x.prefs, plan.prefs)) || null);
+  // A 自由配置 plan (made from 首頁「居家配置」) is open and no bundle is picked.
+  const freeOpen = () => { const p = activePlan(); return !!p && !!p.free && !state.bundleId; };
 
   // Viewing the results counts as finishing (the ~30% who only want to know what to buy):
   // keep a 推薦紀錄 for these prefs unless a plan with the same prefs already exists.
@@ -469,7 +473,9 @@
     if (!plan || state.loadedPlanId !== plan.id) return;
     try {
       const proj = (JSON.parse(localStorage.getItem('standalone_projects')) || {}).demo;
-      if (proj && JSON.stringify(proj) !== JSON.stringify(plan.project)) { plan.project = proj; plan.updatedAt = Date.now(); savePlans(); }
+      const draft = JSON.parse(localStorage.getItem(BLOCK_KEY) || 'null');
+      const changed = (proj && JSON.stringify(proj) !== JSON.stringify(plan.project)) || JSON.stringify(draft) !== JSON.stringify(plan.blockDraft || null);
+      if (changed) { if (proj) plan.project = proj; plan.blockDraft = draft; plan.updatedAt = Date.now(); savePlans(); }
     } catch (e) { /* ignore */ }
   }
   function loadPlanIntoApp(plan) {
@@ -477,6 +483,7 @@
       AUTH_KEYS.forEach(k => localStorage.setItem(k, 'standalone'));
       localStorage.setItem('standalone_projects', JSON.stringify({ demo: plan.project }));
       localStorage.removeItem('aae_active_floor_demo');
+      if (plan.blockDraft) localStorage.setItem(BLOCK_KEY, JSON.stringify(plan.blockDraft)); else localStorage.removeItem(BLOCK_KEY);
       state.loadedPlanId = plan.id; save();
       return true;
     } catch (e) { toast('瀏覽器儲存空間不足，無法開啟方案'); return false; }
@@ -499,10 +506,111 @@
     return { project, rebuilt: false };
   }
 
-  function createPlan(b, u, layout) {
-    const { project, rebuilt } = placeOnLayout(b, u, layout);
+  // ── 新增方案 setup: 預設格局 / 上傳圖檔 / 積木拼平面圖 ──
+  const freeBundle = u => ({ r: { id: '' }, n: { id: '' }, N: 0, floorUnits: Array.from({ length: Math.max(1, u.floors) }, () => 0) });
+  function blockDraftFor(u) {
+    const perFloor = u.area / Math.max(1, u.floors), w = Math.max(8, Math.ceil(Math.sqrt(perFloor * 4 / 3)) + 4), h = Math.max(6, Math.ceil(perFloor / Math.sqrt(perFloor * 4 / 3)) + 4);
+    return { floorId: 'f_1', size: { w, h }, rooms: [] };
+  }
+  // Project for an upload / blocks setup: same floors and devices as the generated house, no walls.
+  function projectFromSetup(b, u, setup) {
+    const proj = buildProject(b, u).demo;
+    proj.projectName = setup.name || proj.projectName;
+    if (setup.source === 'blocks') {
+      const d = blockDraftFor(u);
+      proj.floors.forEach(f => { f.walls = []; f.imageWidth = d.size.w * 100; f.imageHeight = d.size.h * 100; });
+    } else if (setup.source === 'upload' && setup.image) {
+      const { url, w, h } = setup.image;
+      proj.scaleSet = false; // the app asks for the scale on an uploaded plan
+      proj.floors.forEach((f, i) => {
+        f.walls = [];
+        if (i === 0) Object.assign(f, { floorplanImg: url, imageWidth: w, imageHeight: h });
+        f.routers.forEach((r, k, a) => (r.position = { x: Math.round((-0.5 + (k + 0.5) / a.length) * w * 0.6), y: 0 }));
+      });
+    }
+    return proj;
+  }
+  function createFreePlan(setup) {
+    const u = engineInput(), fb = freeBundle(u);
+    const project = setup.source === 'default' ? buildProject(fb, u).demo : projectFromSetup(fb, u, setup);
     store.seq += 1;
-    const plan = { id: 'pl_' + Date.now(), name: '方案 ' + store.seq, createdAt: Date.now(), updatedAt: Date.now(), prefs: prefsOf(), bundleId: bundleKey(b), label: bundleLabel(b), units: b.N, project };
+    project.projectName = setup.name || '方案 ' + store.seq;
+    const plan = { id: 'pl_' + Date.now(), free: true, name: project.projectName, createdAt: Date.now(), updatedAt: Date.now(), prefs: prefsOf(), bundleId: '', label: '自由配置', units: 0, project, blockDraft: setup.source === 'blocks' ? blockDraftFor(u) : null };
+    store.plans.unshift(plan); store.activeId = plan.id;
+    state.openGroups = ['other'];
+    savePlans();
+    return plan;
+  }
+
+  // Dialog shown before a new plan opens in the editor. Resolves to the setup, or null when cancelled.
+  function planSetupDialog({ needCountry, layoutFrom }) {
+    return new Promise(resolve => {
+      const wrap = document.createElement('div');
+      wrap.className = 'ask-wrap';
+      const def = '方案 ' + (store.seq + 1);
+      let source = 'default', image = null;
+      const srcBtn = (v, ico, label) => `<button type="button" class="np-src" data-src="${v}">${ico}<span>${label}</span></button>`;
+      wrap.innerHTML = `<div class="np" role="dialog" aria-modal="true" aria-labelledby="npTitle">
+        <div class="np-head"><h2 id="npTitle">新增方案</h2><button class="np-x" data-a="0" aria-label="關閉">×</button></div>
+        <div class="np-body">
+          <div class="np-left">
+            <label class="np-label" for="npName">方案名稱</label><input id="npName" class="np-input" maxlength="30" value="${esc(def)}">
+            ${needCountry ? `<label class="np-label" for="npCountry">國家</label><select id="npCountry" class="np-input"><option value="TW">台灣</option><option value="CN">中國</option><option value="DE">歐洲 · 德國</option><option value="US">美洲 · 美國</option></select><p class="np-note">之後可以在方案中修改。</p>` : ''}
+          </div>
+          <div class="np-right">
+            <div class="np-srcs">${srcBtn('default', '<svg viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5V20H3z"/><path d="M9 20v-6h6v6"/></svg>', '預設格局')}${srcBtn('upload', '<svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9H7z"/><path d="M12 15V10m-2.5 2.5L12 10l2.5 2.5"/></svg>', '上傳圖檔')}${srcBtn('blocks', '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="9" rx="1"/><rect x="13" y="4" width="7" height="5" rx="1"/><rect x="13" y="11" width="7" height="9" rx="1"/><rect x="4" y="15" width="7" height="5" rx="1"/></svg>', '積木拼平面圖')}</div>
+            <div class="np-pane" id="npPane"></div>
+          </div>
+        </div>
+        <div class="np-foot"><button class="btn btn-ghost btn-sm" data-a="0">取消</button><button class="btn btn-sm" data-a="1" id="npOk">建立</button></div>
+      </div>`;
+      const q = sel => wrap.querySelector(sel);
+      if (needCountry) q('#npCountry').value = state.country || 'TW';
+      const pane = () => {
+        wrap.querySelectorAll('.np-src').forEach(b => b.classList.toggle('on', b.dataset.src === source));
+        const P = q('#npPane');
+        if (source === 'default') P.innerHTML = `<div class="np-info"><b>${layoutFrom ? `沿用「${esc(layoutFrom.name)}」的格局` : '使用示意格局'}</b><p>${layoutFrom ? '牆面與平面圖沿用目前方案，裝置換成這一組。' : needCountry ? '自動產生簡單的示意格局，進入後可放置路由器並調整牆面。' : '依你填的坪數與樓層自動產生簡單格局，裝置已擺好，可直接拖曳調整。'}</p></div>`;
+        else if (source === 'blocks') P.innerHTML = '<div class="np-info"><b>用房間積木拼出你家</b><p>進入後從右側加入客廳、臥室、廚房等房間，拖曳排好位置，系統會自動產生牆面。</p></div>';
+        else P.innerHTML = image
+          ? `<div class="np-preview"><img src="${image.url}" alt="平面圖預覽"><button class="np-clear" id="npClear" aria-label="移除圖檔">×</button></div><p class="np-dim">${image.w} × ${image.h} px</p>`
+          : `<label class="np-drop" id="npDrop"><input type="file" accept="image/png,image/jpeg" id="npFile" hidden><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9H7z"/><path d="M12 15V10m-2.5 2.5L12 10l2.5 2.5"/></svg><b>選擇平面圖檔案</b><span>PNG 或 JPG，建議寬度至少 1000px；進入後需設定比例尺</span></label>`;
+        q('#npOk').disabled = source === 'upload' && !image;
+        const file = q('#npFile');
+        if (file) {
+          const take = f => {
+            if (!f || !/^image\/(png|jpeg)$/.test(f.type)) return toast('請選擇 PNG 或 JPG 圖檔');
+            const rd = new FileReader();
+            rd.onload = () => { const im = new Image(); im.onload = () => { image = { url: rd.result, w: im.naturalWidth, h: im.naturalHeight }; pane(); }; im.src = rd.result; };
+            rd.readAsDataURL(f);
+          };
+          file.onchange = () => take(file.files[0]);
+          const drop = q('#npDrop');
+          drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+          drop.ondragleave = () => drop.classList.remove('over');
+          drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); take(e.dataTransfer.files[0]); };
+        }
+        if (q('#npClear')) q('#npClear').onclick = () => { image = null; pane(); };
+      };
+      wrap.querySelectorAll('.np-src').forEach(b => (b.onclick = () => { source = b.dataset.src; pane(); }));
+      const done = ok => {
+        document.removeEventListener('keydown', onKey); wrap.remove();
+        if (!ok) return resolve(null);
+        resolve({ name: q('#npName').value.trim() || def, country: needCountry ? q('#npCountry').value : null, source, image });
+      };
+      const onKey = e => { if (e.key === 'Escape') done(false); };
+      document.addEventListener('keydown', onKey);
+      wrap.querySelectorAll('[data-a]').forEach(b => (b.onclick = () => { if (b.dataset.a === '1' && b.disabled) return; done(b.dataset.a === '1'); }));
+      document.body.appendChild(wrap);
+      pane();
+      q('#npName').select();
+    });
+  }
+
+  function createPlan(b, u, layout, setup) {
+    const built = setup && setup.source !== 'default' ? { project: projectFromSetup(b, u, setup), rebuilt: false } : placeOnLayout(b, u, layout);
+    const { project, rebuilt } = built;
+    store.seq += 1;
+    const plan = { id: 'pl_' + Date.now(), name: (setup && setup.name) || '方案 ' + store.seq, createdAt: Date.now(), updatedAt: Date.now(), prefs: prefsOf(), bundleId: bundleKey(b), label: bundleLabel(b), units: b.N, project, blockDraft: setup && setup.source === 'blocks' ? blockDraftFor(u) : null };
     if (!store.plans.some(x => x.kind === 'rec' && samePrefs(x.prefs, plan.prefs))) { const r = results(); recordRecommendation(r.models, r.bundles); }
     store.plans.unshift(plan); store.activeId = plan.id;
     delete state.openGroups; // 我的規劃 opens the group holding this plan next time
@@ -516,7 +624,7 @@
     const plan = store.plans.find(x => x.id === id);
     if (!plan) return;
     Object.assign(state, JSON.parse(JSON.stringify(plan.prefs)));
-    state.bundleId = plan.bundleId; state.prefsDone = true; state.newPlanFrom = null; state.seededKey = null;
+    state.bundleId = plan.bundleId || null; state.prefsDone = !plan.free || state.prefsDone; state.newPlanFrom = null; state.seededKey = null;
     store.activeId = plan.id; savePlans();
     loadPlanIntoApp(plan);
     go('floorplan');
@@ -603,7 +711,7 @@
           </div>`
         : `<div class="src-card src-free${on ? ' on' : ''}" data-toggle="${g.key}" role="button" aria-pressed="${on}">
             <div class="src-top"><span class="src-kind">自由配置</span>${fresh ? newTag : ''}</div>
-            <div class="src-model"><span class="src-ico">${I.plans}</span><div class="plan-meta muted">沒有對應推薦紀錄的方案</div></div>
+            <div class="src-model"><span class="src-ico">${I.plans}</span><div class="plan-meta muted">直接居家配置，或推薦紀錄已刪除的方案</div></div>
             <div class="src-foot">${count}</div>
           </div>`;
     };
@@ -664,7 +772,7 @@
 
   function renderFloorplan(el) {
     const { u, bundles, allBundles } = results();
-    const blank = state.seededKey === 'blank' && !state.bundleId;
+    const blank = state.seededKey === 'blank' && !state.bundleId && !freeOpen();
     try { AUTH_KEYS.forEach(k => localStorage.setItem(k, 'standalone')); } catch (e) { /* ignore */ }
     let plan = null, fresh = false, note = '';
     const b = allBundles.find(x => bundleKey(x) === state.bundleId) || null;
@@ -673,7 +781,10 @@
       const cur = activePlan();
       const prefsMatch = cur && samePrefs(cur.prefs, prefsOf());
       const existing = triedPlans(prefsOf()).find(x => x.bundleId === state.bundleId);
-      if (state.newPlanFrom && b) {
+      if (freeOpen()) {
+        plan = cur;
+        if (state.loadedPlanId !== cur.id) fresh = loadPlanIntoApp(cur);
+      } else if (state.newPlanFrom && b) {
         // Explicit 新增方案: copy the source plan's layout.
         const src = store.plans.find(x => x.id === state.newPlanFrom);
         const r = createPlan(b, u, src && src.project);
@@ -689,11 +800,22 @@
         plan = existing; store.activeId = existing.id; savePlans();
         fresh = loadPlanIntoApp(existing);
         note = `已開啟${existing.name}`;
+      } else if (b && !planSetup) {
+        // New plan: ask for its name and floor plan source first.
+        el.innerHTML = '<div class="page-full"></div>';
+        planSetupDialog({ needCountry: false, layoutFrom: cur }).then(setup => {
+          if (location.hash !== '#floorplan') return;
+          if (!setup) { go('results'); return; }
+          planSetup = setup; render();
+        });
+        return;
       } else if (b) {
-        // Different bundle or prefs: keep the current plan, save this one as a new plan on the same layout.
-        const r = createPlan(b, u, cur && cur.project);
+        // Different bundle or prefs: keep the current plan, save this one as a new plan.
+        const setup = planSetup; planSetup = null;
+        const r = createPlan(b, u, cur && cur.project, setup);
         plan = r.plan;
         if (cur) note = r.rebuilt ? `已另存為${plan.name}；樓層數不同，已重新產生示意格局` : `已另存為${plan.name}，「${cur.name}」保留在我的規劃`;
+        if (setup && setup.source === 'upload') note = '請先設定比例尺：在平面圖上標出一段已知長度';
         fresh = loadPlanIntoApp(plan);
       } else if (cur) {
         plan = cur;
@@ -701,7 +823,7 @@
       }
     }
     // Plans whose 推薦紀錄 was deleted (自由配置) stay as they are: no 試其他套組.
-    const orphan = !!plan && !recOf(plan);
+    const orphan = !!plan && !plan.free && !recOf(plan);
     const ids = plan ? plan.bundleId.split('|') : [];
     const mapped = ids.slice(0, 2).filter((id, i, a) => id && a.indexOf(id) === i && FP_MODEL[id] && FP_MODEL[id] !== id);
     // Devices sit on different floors; the app only shows one floor at a time, so offer a floor switcher.
@@ -710,15 +832,15 @@
       <div class="fp-bar">
         <span class="quick-ico" style="width:38px;height:38px">${I.plan}</span>
         <div><div class="fp-bar-title">${plan ? `<span class="fp-plan-name">${esc(plan.name)}</span>${esc(plan.label)}` : '自由試用'}</div>
-          <div class="fp-bar-meta">${plan ? `共 ${plan.units} 台 · ${areaText(u.area)} · ${u.floors} 層 · 自動儲存，可拖曳調整或上傳自家平面圖${mapped.length ? `<span class="fp-sim">　以 ${mapped.map(id => esc(FP_MODEL[id])).join('、')} 模擬</span>` : ''}` : '未帶入推薦套組；可上傳平面圖並自行放置路由器'}</div>
+          <div class="fp-bar-meta">${plan && plan.free ? '自動儲存 · 可放置路由器、上傳或拼出自家平面圖' : plan ? `共 ${plan.units} 台 · ${areaText(u.area)} · ${u.floors} 層 · 自動儲存，可拖曳調整或上傳自家平面圖${mapped.length ? `<span class="fp-sim">　以 ${mapped.map(id => esc(FP_MODEL[id])).join('、')} 模擬</span>` : ''}` : '未帶入推薦套組；可上傳平面圖並自行放置路由器'}</div>
           ${floorList.length ? `<div class="fp-floors">${floorList.map((f, i) => `<button class="fp-floor${i === 0 ? ' on' : ''}" data-floor="${f.id}"><b>${f.name}</b>${esc(f.devices.join('、'))}</button>`).join('')}</div>` : ''}</div>
         <span class="spacer"></span>
         ${plan && b ? '<button class="link-btn fp-reset" id="reseed">重置擺放</button>' : ''}
-        ${orphan ? '' : `<button class="btn btn-sm" id="swap">${plan ? '試其他套組' : '先看推薦'}</button>`}
+        ${orphan ? '' : `<button class="btn btn-sm" id="swap">${plan && !plan.free ? '試其他套組' : '先看推薦'}</button>`}
       </div>
       <iframe class="fp-frame" id="fpFrame" title="ASUS WiFi Floorplan" src="${FP_SRC}${fresh ? '?t=' + Date.now() : ''}"></iframe>
     </div>`;
-    if ($('swap')) $('swap').onclick = () => go('results');
+    if ($('swap')) $('swap').onclick = () => go(plan && !plan.free ? 'results' : state.prefsDone ? 'results' : 'needs');
     if ($('reseed')) $('reseed').onclick = async () => {
       if (!await askConfirm('重置擺放？', '機器會回到預設位置，你調整過的位置會被取代；牆和平面圖會保留。', '重置')) return;
       capturePlan();
@@ -746,7 +868,7 @@
     const msg = [note, floorList.length ? `這組分在 ${floorList.length} 個樓層，點上方樓層切換查看` : ''].filter(Boolean);
     msg.forEach((m, i) => pendingToasts.push(setTimeout(() => toast(m), 900 + i * 2200)));
   }
-  let floorSyncTimer, captureTimer, pendingToasts = [];
+  let floorSyncTimer, captureTimer, pendingToasts = [], planSetup = null;
 
   // ── Simple confirm dialog ──
   function askConfirm(title, detail, okLabel = '刪除') {
@@ -879,7 +1001,7 @@
   ];
   // Highest step the user has unlocked: prefs always; results after finishing the
   // questionnaire; floor plan once a bundle was picked on the results page.
-  function unlocked() { return state.bundleId || state.seededKey === 'blank' ? 2 : state.prefsDone ? 1 : 0; }
+  function unlocked() { return state.bundleId || state.seededKey === 'blank' || freeOpen() ? 2 : state.prefsDone ? 1 : 0; }
   function stepOf(s) { return FLOW.findIndex(f => f.key === s.rail); }
 
   function renderStepper(s) {
@@ -889,7 +1011,7 @@
     const max = unlocked();
     const hints = ['', '', '拖曳調整位置，查看訊號覆蓋'];
     const finished = i => (i === 0 ? state.prefsDone : i === 1 ? !!state.bundleId : false);
-    const op = activePlan(), orphanOpen = s.id === 'floorplan' && op && state.loadedPlanId === op.id && !recOf(op);
+    const op = activePlan(), orphanOpen = s.id === 'floorplan' && op && !op.free && state.loadedPlanId === op.id && !recOf(op);
     nav.innerHTML = FLOW.map((f, i) => {
       const cls = i === cur ? 'current' : i <= max ? 'done' : 'locked';
       const off = cls === 'locked' || (orphanOpen && i < cur);
@@ -939,13 +1061,26 @@
   if (new URLSearchParams(location.search).get('demo') === '0') document.body.classList.add('no-demo');
   // '#try' = free floor plan trial without a recommendation (used by the landing page)
   function route() {
-    if (location.hash === '#try') { state.bundleId = null; state.seededKey = 'blank'; save(); clearFloorplanProject(); location.replace('#floorplan'); return; }
+    if (location.hash === '#try') {
+      location.replace('#home');
+      planSetupDialog({ needCountry: true, layoutFrom: null }).then(setup => {
+        if (!setup) return;
+        capturePlan();
+        if (setup.country) state.country = setup.country;
+        const plan = createFreePlan(setup);
+        state.bundleId = null; state.seededKey = null; save();
+        loadPlanIntoApp(plan);
+        go('floorplan');
+        if (setup.source === 'upload') setTimeout(() => toast('請先設定比例尺：在平面圖上標出一段已知長度'), 900);
+      });
+      return;
+    }
     render();
   }
   // Unfinished questionnaire is not kept across visits: back to the open plan's prefs, or defaults.
   if (state.inProgress || !state.prefsDone) {
     const cur = activePlan();
-    if (cur) state = Object.assign(state, JSON.parse(JSON.stringify(cur.prefs)), { bundleId: cur.bundleId, prefsDone: true });
+    if (cur && !cur.free) state = Object.assign(state, JSON.parse(JSON.stringify(cur.prefs)), { bundleId: cur.bundleId, prefsDone: true });
     else state = Object.assign(initial(), { decisionsSeen: state.decisionsSeen || {}, seededKey: state.seededKey === 'blank' ? 'blank' : null });
     state.newPlanFrom = null; state.inProgress = false; save();
   }
