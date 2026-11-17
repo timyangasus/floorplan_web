@@ -98,6 +98,17 @@
     $('rail').querySelectorAll('[data-href]').forEach(b => (b.onclick = () => window.open(b.dataset.href, '_blank')));
   }
 
+  // A fresh round of planning: default answers and a new round id, so it always makes a new
+  // 推薦紀錄 (saved records/plans stay as they are).
+  function startFresh() {
+    capturePlan();
+    const d = initial();
+    PREF_KEYS.forEach(k => (state[k] = d[k]));
+    state.round = 'r' + Date.now();
+    Object.assign(state, { prefsDone: false, bundleId: null, newPlanFrom: null, inProgress: false });
+    save(); go('needs');
+  }
+
   // ── 0_010 Home ──
   function renderHome(el) {
     el.innerHTML = `<div class="page">
@@ -121,9 +132,9 @@
       <div class="home-strip"><div><div class="eyebrow">能幫你做什麼</div><h2 class="promo-heading">從挑機種到擺位置，一次搞定</h2></div></div>
       ${promoBanners()}
     </div>`;
-    $('start').onclick = () => go('needs');
+    $('start').onclick = startFresh;
     $('startPlan').onclick = () => go('try');
-    el.querySelectorAll('[data-promo]').forEach(b => (b.onclick = () => go('needs')));
+    el.querySelectorAll('[data-promo]').forEach(b => (b.onclick = startFresh));
   }
 
   // Home "能幫你做什麼" — illustrated promo banners (bento layout). All banners start the flow at step 1.
@@ -807,15 +818,9 @@
       input.onblur = () => done(true);
     }));
     const sf = $('startFirst');
-    if (sf) sf.onclick = () => { state.round = 'r' + Date.now(); save(); go('needs'); };
+    if (sf) sf.onclick = startFresh;
     // A fresh round of planning: start from default preferences (saved records/plans stay as they are).
-    if ($('startNew')) $('startNew').onclick = () => {
-      const d = initial();
-      PREF_KEYS.forEach(k => (state[k] = d[k]));
-      state.round = 'r' + Date.now();
-      Object.assign(state, { prefsDone: false, bundleId: null, newPlanFrom: null, inProgress: false });
-      save(); go('needs');
-    };
+    if ($('startNew')) $('startNew').onclick = startFresh;
   }
 
   function renderFloorplan(el) {
