@@ -107,7 +107,7 @@
           <div>告訴我們你的用途與空間 <span class="muted">· 推薦適合的機種與台數</span></div>
           <div>放進你家的平面圖 <span class="muted">· 模擬每個房間的訊號覆蓋</span></div>
         </div>
-        <div class="hero-cta"><button class="btn btn-xl" id="start">推薦機種 <span class="btn-arrow">→</span></button><button class="btn btn-xl btn-outline" id="startPlan">居家配置</button></div>
+        <div class="hero-cta"><button class="btn btn-xl" id="start">推薦機種</button><button class="btn btn-xl btn-teal" id="startPlan">居家配置</button></div>
       </section>
       <div class="home-strip"><div><div class="eyebrow">能幫你做什麼</div><h2 class="promo-heading">從挑機種到擺位置，一次搞定</h2></div></div>
       ${promoBanners()}
