@@ -844,11 +844,11 @@
           ${floorList.length ? `<div class="fp-floors">${floorList.map((f, i) => `<button class="fp-floor${i === 0 ? ' on' : ''}" data-floor="${f.id}"><b>${f.name}</b>${esc(f.devices.join('、'))}</button>`).join('')}</div>` : ''}</div>
         <span class="spacer"></span>
         ${plan && b ? '<button class="link-btn fp-reset" id="reseed">重置擺放</button>' : ''}
-        ${orphan ? '' : `<button class="btn btn-sm" id="swap">${plan && !plan.free ? '試其他套組' : '先看推薦'}</button>`}
+        ${plan && !plan.free && !orphan ? '<button class="btn btn-sm" id="swap">試其他套組</button>' : ''}
       </div>
       <iframe class="fp-frame" id="fpFrame" title="ASUS WiFi Floorplan" src="${FP_SRC}${fresh ? '?t=' + Date.now() : ''}"></iframe>
     </div>`;
-    if ($('swap')) $('swap').onclick = () => go(plan && !plan.free ? 'results' : state.prefsDone ? 'results' : 'needs');
+    if ($('swap')) $('swap').onclick = () => go('results');
     if ($('reseed')) $('reseed').onclick = async () => {
       if (!await askConfirm('重置擺放？', '機器會回到預設位置，你調整過的位置會被取代；牆和平面圖會保留。', '重置')) return;
       capturePlan();
@@ -1014,8 +1014,9 @@
 
   function renderStepper(s) {
     const nav = $('flowSteps'), cur = stepOf(s);
-    nav.hidden = cur < 0;
-    if (cur < 0) return;
+    // The editor page gets the full height: no stepper once the floor plan is open.
+    nav.hidden = cur < 0 || s.id === 'floorplan';
+    if (nav.hidden) return;
     const max = unlocked();
     const hints = ['', '', '拖曳調整位置，查看訊號覆蓋'];
     const finished = i => (i === 0 ? state.prefsDone : i === 1 ? !!state.bundleId : false);
