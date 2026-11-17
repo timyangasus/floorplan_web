@@ -260,6 +260,7 @@
 
 
   // ── 2_010 Results ──
+  const BRANDS = ['ASUS', 'ROG', 'TUF'], TIERS = ['入門', '中階', '高階'];
   function renderResults(el) {
     const { u, models, bundles, allBundles } = results();
     const bestFor = id => allBundles.find(b => b.r.id === id) || null;
@@ -272,8 +273,8 @@
     const tags = [u.p.map(i => E.primaryNames[i] + (i === u.top && u.p.length > 1 ? '★' : '')).join('、'), ...u.s.map(i => E.secondaryNames[i]), areaText(u.area), `${u.floors} 層`, u.bh === 'wired' ? '有線回程' : '無線回程'].filter(Boolean);
     const fchip = (g, v, label, on) => `<button class="chip${on ? ' on' : ''}" data-f="${g}" data-v="${v}">${label}</button>`;
     const filters = `<div class="res-filters">
-        <div class="res-filter"><span class="res-filter-label">品牌／系列</span><div class="chips">${fchip('brand', '', '全部', !state.brands.length)}${['ASUS', 'ROG', 'TUF'].map(v => fchip('brand', v, v, state.brands.includes(v))).join('')}</div></div>
-        <div class="res-filter"><span class="res-filter-label">產品定位</span><div class="chips">${fchip('tier', '', '全部', !state.tiers.length)}${['入門', '中階', '高階'].map(v => fchip('tier', v, E.tierNames[v], state.tiers.includes(v))).join('')}</div></div>
+        <div class="res-filter"><span class="res-filter-label">品牌／系列</span><div class="chips">${BRANDS.map(v => fchip('brand', v, v, !state.brands.length || state.brands.includes(v))).join('')}</div></div>
+        <div class="res-filter"><span class="res-filter-label">產品定位</span><div class="chips">${TIERS.map(v => fchip('tier', v, E.tierNames[v], !state.tiers.length || state.tiers.includes(v))).join('')}</div></div>
       </div>`;
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">推薦結果</div><div class="title-row"><h1 class="page-title">這些機種最適合你家</h1></div><div class="summary-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}<button class="link-btn tags-edit" id="edit">修改條件</button></div></div></div>
@@ -305,13 +306,13 @@
 `}
     </div>`;
     $('edit').onclick = () => go('needs');
-    // Quick filters: brand is multi-select (none or all three = 全部); 產品定位 is single choice.
+    // Quick filters: both multi-select, all on by default (empty list = all); at least one stays on.
     el.querySelectorAll('[data-f]').forEach(b => (b.onclick = () => {
-      const v = b.dataset.v;
-      if (b.dataset.f === 'brand') {
-        state.brands = !v ? [] : state.brands.includes(v) ? state.brands.filter(x => x !== v) : [...state.brands, v];
-        if (state.brands.length === 3) state.brands = [];
-      } else state.tiers = !v || state.tiers.includes(v) ? [] : [v];
+      const v = b.dataset.v, key = b.dataset.f === 'brand' ? 'brands' : 'tiers', all = key === 'brands' ? BRANDS : TIERS;
+      const cur = state[key].length ? state[key] : all;
+      const next = cur.includes(v) ? cur.filter(x => x !== v) : all.filter(x => cur.includes(x) || x === v);
+      if (!next.length) return toast('至少保留一個選項');
+      state[key] = next.length === all.length ? [] : next;
       state.brandOn = !!state.brands.length; state.tierOn = !!state.tiers.length;
       save(); rerenderKeepScroll();
     }));
