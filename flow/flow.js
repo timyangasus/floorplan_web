@@ -67,7 +67,7 @@
 
   // ── Screens ──
   const SCREENS = [
-    { id: 'home', code: '0_010', rail: 'home', description: '首頁：大字標題＋「開始規劃」主按鈕，下方為功能 banner（未完成的進度在「我的規劃」）', render: renderHome },
+    { id: 'home', code: '0_010', rail: 'home', description: '首頁：大字標題＋「推薦機種」主按鈕、「居家配置」直接進平面圖，下方為功能 banner（未完成的進度在「我的規劃」）', render: renderHome },
     { id: 'needs', code: '1_010', rail: 'prefs', description: '偏好 1/3：主要用途（可複選，標記最重要的一項）', render: renderNeeds },
     { id: 'care', code: '1_020', rail: 'prefs', description: '偏好 2/3：還在意什麼、外觀、品牌與產品定位', render: renderCare },
     { id: 'home-size', code: '1_030', rail: 'prefs', description: '偏好 3/3：我家的樣子（面積、樓層、回程、地區）', render: renderHomeSize },
@@ -107,12 +107,13 @@
           <div>告訴我們你的用途與空間 <span class="muted">· 推薦適合的機種與台數</span></div>
           <div>放進你家的平面圖 <span class="muted">· 模擬每個房間的訊號覆蓋</span></div>
         </div>
-        <div class="hero-cta"><button class="btn btn-xl" id="start">開始規劃 <span class="btn-arrow">→</span></button></div>
+        <div class="hero-cta"><button class="btn btn-xl" id="start">推薦機種 <span class="btn-arrow">→</span></button><button class="btn btn-xl btn-outline" id="startPlan">居家配置</button></div>
       </section>
       <div class="home-strip"><div><div class="eyebrow">能幫你做什麼</div><h2 class="promo-heading">從挑機種到擺位置，一次搞定</h2></div></div>
       ${promoBanners()}
     </div>`;
     $('start').onclick = () => go('needs');
+    $('startPlan').onclick = () => go('try');
     el.querySelectorAll('[data-promo]').forEach(b => (b.onclick = () => go('needs')));
   }
 
