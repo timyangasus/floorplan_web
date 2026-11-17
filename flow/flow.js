@@ -295,7 +295,7 @@
         <details><summary>推薦理由與限制</summary>依你選的用途與在意的功能評估；台數是此面積與樓層下的最低預估，不是實測保證。${u.bh === 'wired' ? '有線' : '無線'}回程與混搭相容仍待驗證。</details>
       </div>`).join('')}</div>` : '<div class="card empty">沒有符合條件的配置套組，請調整條件。</div>'}` : ''}
 
-      <div class="cta-band"><div><h3>想知道放在家裡哪裡最好？</h3><p>把第一名機種的建議配置放進你家的平面圖，看每個房間的訊號覆蓋。</p></div><div class="cta-actions"><button class="btn" id="cta" ${bundles.length ? '' : 'disabled'}>開始居家配置 →</button>${models[0] && bestFor(models[0].id) ? cartBtn(`data-buy-model="${esc(models[0].id)}"`, 'cart-btn-light') : ''}</div></div>
+      <div class="cta-band"><div><h3>想知道放在家裡哪裡最好？</h3><p>把第一名機種的建議配置放進你家的平面圖，看每個房間的訊號覆蓋。</p></div><div class="cta-actions"><button class="btn" id="cta" ${bundles.length ? '' : 'disabled'}>開始居家配置 →</button></div></div>
 `}
     </div>`;
     $('edit').onclick = () => go('needs');
