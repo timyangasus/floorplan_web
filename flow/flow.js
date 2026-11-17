@@ -602,7 +602,6 @@
     return plan;
   }
 
-  const SAMPLE_PLAN = 'flow/sample-floorplan.webp';
   function readImage(blob, cb) {
     const rd = new FileReader();
     rd.onload = () => { const im = new Image(); im.onload = () => cb({ url: rd.result, w: im.naturalWidth, h: im.naturalHeight }); im.src = rd.result; };
@@ -637,13 +636,12 @@
         const P = q('#npPane');
         if (source === 'default') P.innerHTML = `<div class="np-info"><b>${layoutFrom ? `沿用「${esc(layoutFrom.name)}」的格局` : '使用示意格局'}</b><p>${layoutFrom ? '牆面與平面圖沿用目前方案，裝置換成這一組。' : needCountry ? '自動產生簡單的示意格局，進入後可放置路由器並調整牆面。' : '依你填的坪數與樓層自動產生簡單格局，裝置已擺好，可直接拖曳調整。'}</p></div>`;
         else if (source === 'blocks') P.innerHTML = '<div class="np-info"><b>用房間積木拼出你家</b><p>進入後從右側加入客廳、臥室、廚房等房間，拖曳排好位置，系統會自動產生牆面。</p></div>';
-        else if (!image && !sampleOff) {
+        else if (!image && !sampleOff && window.FPW_SAMPLE_PLAN) {
           // Upload starts with a sample floor plan; × swaps it for the user's own file.
-          P.innerHTML = '<div class="np-info"><p>載入示範平面圖…</p></div>';
-          fetch(SAMPLE_PLAN).then(r => r.blob()).then(bl => readImage(bl, im => { if (!image && !sampleOff) { image = { ...im, sample: true }; pane(); } })).catch(() => { sampleOff = true; pane(); });
+          image = { ...window.FPW_SAMPLE_PLAN, sample: true }; pane(); return;
         } else P.innerHTML = image
           ? `<div class="np-preview"><img src="${image.url}" alt="平面圖預覽"><button class="np-clear" id="npClear" aria-label="移除圖檔">×</button></div><p class="np-dim">${image.sample ? '示範平面圖 · ' : ''}${image.w} × ${image.h} px${image.sample ? ' · 按 × 換成自己的圖' : ''}</p>`
-          : `<label class="np-drop" id="npDrop"><input type="file" accept="image/png,image/jpeg" id="npFile" hidden><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9H7z"/><path d="M12 15V10m-2.5 2.5L12 10l2.5 2.5"/></svg><b>選擇平面圖檔案</b><span>PNG 或 JPG，建議寬度至少 1000px；進入後需設定比例尺</span></label>`;
+          : `<label class="np-drop" id="npDrop"><input type="file" accept="image/png,image/jpeg" id="npFile" hidden><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9H7z"/><path d="M12 15V10m-2.5 2.5L12 10l2.5 2.5"/></svg><b>選擇平面圖檔案</b><span>PNG 或 JPG，建議寬度至少 1000px；進入後需設定比例尺</span></label>${window.FPW_SAMPLE_PLAN ? '<button type="button" class="link-btn np-use-sample" id="npSample">改用示範平面圖</button>' : ''}`;
         q('#npOk').disabled = source === 'upload' && !image;
         const file = q('#npFile');
         if (file) {
@@ -657,6 +655,7 @@
           drop.ondragleave = () => drop.classList.remove('over');
           drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); take(e.dataTransfer.files[0]); };
         }
+        if (q('#npSample')) q('#npSample').onclick = () => { sampleOff = false; image = null; pane(); };
         if (q('#npClear')) q('#npClear').onclick = () => { image = null; sampleOff = true; pane(); };
       };
       wrap.querySelectorAll('.np-src').forEach(b => (b.onclick = () => { source = b.dataset.src; pane(); }));

@@ -740,3 +740,4 @@ svg { display: block; }
 .choice-go { position: absolute; right: 22px; bottom: 20px; font-size: 22px; transition: transform .2s; }
 .choice:hover .choice-go { transform: translateX(4px); }
 @media (max-width: 640px) { .hero-choices { grid-template-columns: 1fr; } .choice { min-height: 0; } }
+.np-use-sample { align-self: center; margin-top: 10px; font-size: 13px; }
