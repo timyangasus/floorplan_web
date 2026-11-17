@@ -485,6 +485,7 @@ svg { display: block; }
 .fp-floor:hover { border-color: #b9d7ff; }
 .fp-floor.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-2); }
 .fp-floor.on b { background: var(--accent); color: #fff; }
+.fp-stage { flex: 1; min-height: 0; position: relative; display: flex; overflow: hidden; }
 .fp-frame { flex: 1; min-height: 0; border: 0; width: 100%; background: #fff; }
 .fp-sim { color: var(--ink-3); }
 .fp-reset { font-size: 13px; color: var(--ink-2); }
@@ -673,3 +674,20 @@ svg { display: block; }
 .np-dim { text-align: center; font-size: 13px; color: var(--ink-3); margin: 8px 0 0; }
 .np-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 24px; border-top: 1px solid var(--line); }
 @media (max-width: 720px) { .np-body { grid-template-columns: 1fr; } }
+
+/* 試其他套組 drawer (editor right side) */
+.swap-drawer { position: absolute; top: 0; right: 0; bottom: 0; width: min(340px, 90%); z-index: 5; background: var(--card); border-left: 1px solid var(--line); box-shadow: -12px 0 30px rgba(0, 0, 0, .08); display: flex; flex-direction: column; transform: translateX(105%); transition: transform .22s ease; }
+.swap-drawer.open { transform: none; }
+.swap-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 16px 16px 12px; border-bottom: 1px solid var(--line); }
+.swap-head b { font-size: 16px; }
+.swap-head .small { margin-top: 4px; line-height: 1.5; }
+.swap-list { flex: 1; overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.swap-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff; text-align: left; transition: border-color .15s, background .15s; }
+.swap-item:hover { border-color: #9cc4ff; background: #f7faff; }
+.swap-item.on { border-color: var(--accent); background: var(--accent-soft); cursor: default; }
+.swap-item img { width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; }
+.swap-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.swap-name { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.swap-meta { font-size: 12px; color: var(--ink-3); }
+.swap-cur { font-size: 12px; font-weight: 600; color: var(--accent-2); white-space: nowrap; }
+.btn.on { box-shadow: 0 0 0 3px var(--accent-soft); }

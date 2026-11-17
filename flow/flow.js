@@ -74,7 +74,7 @@
     { id: 'results', code: '2_010', rail: 'rank', description: '推薦結果：品牌／產品定位快速篩選＋機種排行＋配置套組，看到即完成；可在我家試擺（約 70%）或購物車前往購買（約 30%）', render: renderResults },
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
-    { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；「試其他套組」回推薦結果另選，「重置擺放」讓機器回預設位置', render: renderFloorplan },
+    { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；「試其他套組」右側選單直接替換本方案裝置，「重置擺放」讓機器回預設位置', render: renderFloorplan },
     { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：上方為推薦紀錄（藍）與自由配置（綠）卡片，點選後下方顯示對應方案；推薦紀錄刪除後方案移到「自由配置」', render: renderPlans },
   ];
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
@@ -475,8 +475,29 @@
       const proj = (JSON.parse(localStorage.getItem('standalone_projects')) || {}).demo;
       const draft = JSON.parse(localStorage.getItem(BLOCK_KEY) || 'null');
       const changed = (proj && JSON.stringify(proj) !== JSON.stringify(plan.project)) || JSON.stringify(draft) !== JSON.stringify(plan.blockDraft || null);
-      if (changed) { if (proj) plan.project = proj; plan.blockDraft = draft; plan.updatedAt = Date.now(); savePlans(); }
+      if (changed) { if (proj) { plan.project = proj; syncDevices(plan); } plan.blockDraft = draft; plan.updatedAt = Date.now(); savePlans(); }
     } catch (e) { /* ignore */ }
+  }
+  // The card shows what is actually in the editor (devices added or removed there included).
+  const FP_REV = Object.fromEntries(Object.entries(FP_MODEL).map(([k, v]) => [v, k]));
+  function syncDevices(plan) {
+    const rs = (plan.project.floors || []).flatMap(f => f.routers || []);
+    if (!rs.length) { if (plan.free) { plan.label = '自由配置'; plan.units = 0; } return; }
+    const model = r => (r.displayName && r.displayName.includes(' · ') ? r.displayName.split(' · ').pop() : FP_REV[r.name] || r.name);
+    const main = model(rs[0]), nodes = {};
+    rs.slice(1).forEach(r => { const m = model(r); nodes[m] = (nodes[m] || 0) + 1; });
+    plan.label = `${main} × 1${Object.entries(nodes).map(([m, n]) => ` ＋ Node ${m} × ${n}`).join('')}`;
+    plan.units = rs.length;
+  }
+  // 試其他套組: swap the devices of the open plan in place (walls and floor plan stay; no new plan).
+  function swapBundle(plan, b) {
+    capturePlan();
+    const { u } = results();
+    plan.project = placeOnLayout(b, u, plan.project).project;
+    plan.bundleId = bundleKey(b); plan.label = bundleLabel(b); plan.units = b.N; plan.updatedAt = Date.now();
+    state.bundleId = plan.bundleId; state.loadedPlanId = null;
+    savePlans(); save(); render();
+    toast(`${plan.name} 已換成 ${bundleLabel(b)}`);
   }
   function loadPlanIntoApp(plan) {
     try {
@@ -632,6 +653,7 @@
     const plan = store.plans.find(x => x.id === id);
     if (!plan) return;
     Object.assign(state, JSON.parse(JSON.stringify(plan.prefs)));
+    swapOpen = false;
     state.bundleId = plan.bundleId || null; state.prefsDone = !plan.free || state.prefsDone; state.newPlanFrom = null; state.seededKey = null;
     store.activeId = plan.id; savePlans();
     loadPlanIntoApp(plan);
@@ -844,11 +866,17 @@
           ${floorList.length ? `<div class="fp-floors">${floorList.map((f, i) => `<button class="fp-floor${i === 0 ? ' on' : ''}" data-floor="${f.id}"><b>${f.name}</b>${esc(f.devices.join('、'))}</button>`).join('')}</div>` : ''}</div>
         <span class="spacer"></span>
         ${plan && b ? '<button class="link-btn fp-reset" id="reseed">重置擺放</button>' : ''}
-        ${plan && !plan.free && !orphan ? '<button class="btn btn-sm" id="swap">試其他套組</button>' : ''}
+        ${plan && !plan.free && !orphan ? `<button class="btn btn-sm${swapOpen ? ' on' : ''}" id="swap">試其他套組</button>` : ''}
       </div>
-      <iframe class="fp-frame" id="fpFrame" title="ASUS WiFi Floorplan" src="${FP_SRC}${fresh ? '?t=' + Date.now() : ''}"></iframe>
+      <div class="fp-stage">${plan && !plan.free && !orphan ? swapDrawer(plan) : ''}
+      <iframe class="fp-frame" id="fpFrame" title="ASUS WiFi Floorplan" src="${FP_SRC}${fresh ? '?t=' + Date.now() : ''}"></iframe></div>
     </div>`;
-    if ($('swap')) $('swap').onclick = () => go('results');
+    if ($('swap')) $('swap').onclick = () => { swapOpen = !swapOpen; $('swapDrawer').classList.toggle('open', swapOpen); $('swap').classList.toggle('on', swapOpen); };
+    if ($('swapClose')) $('swapClose').onclick = () => { swapOpen = false; $('swapDrawer').classList.remove('open'); $('swap').classList.remove('on'); };
+    el.querySelectorAll('[data-swap]').forEach(btn => (btn.onclick = () => {
+      const nb = allBundles.find(x => bundleKey(x) === btn.dataset.swap);
+      if (nb && plan && bundleKey(nb) !== plan.bundleId) swapBundle(plan, nb);
+    }));
     if ($('reseed')) $('reseed').onclick = async () => {
       if (!await askConfirm('重置擺放？', '機器會回到預設位置，你調整過的位置會被取代；牆和平面圖會保留。', '重置')) return;
       capturePlan();
@@ -876,7 +904,28 @@
     const msg = [note, floorList.length ? `這組分在 ${floorList.length} 個樓層，點上方樓層切換查看` : ''].filter(Boolean);
     msg.forEach((m, i) => pendingToasts.push(setTimeout(() => toast(m), 900 + i * 2200)));
   }
-  let floorSyncTimer, captureTimer, pendingToasts = [], planSetup = null;
+  let floorSyncTimer, captureTimer, pendingToasts = [], planSetup = null, swapOpen = false;
+  // Right-side drawer listing the recommendation's bundles; picking one swaps the plan's devices.
+  function swapDrawer(plan) {
+    const { models, bundles, allBundles } = results();
+    const best = models.slice(0, 3).map(m => allBundles.find(b => b.r.id === m.id)).filter(Boolean);
+    const list = [...best, ...bundles].filter((b, i, a) => a.findIndex(x => bundleKey(x) === bundleKey(b)) === i);
+    const cur = allBundles.find(b => bundleKey(b) === plan.bundleId);
+    if (cur && !list.some(b => bundleKey(b) === plan.bundleId)) list.unshift(cur);
+    const item = (b, i) => {
+      const on = bundleKey(b) === plan.bundleId;
+      return `<button class="swap-item${on ? ' on' : ''}" data-swap="${esc(bundleKey(b))}" ${on ? 'aria-current="true"' : ''}>
+        <img src="${productImg(b.r.id)}" alt="" onerror="this.style.visibility='hidden'">
+        <span class="swap-main"><span class="swap-name">${i === 0 ? '<span class="tag tag-rank1">★</span>' : ''}${esc(b.r.id)}${b.N > 1 ? ` <span class="muted">＋ ${esc(b.n.id)}</span>` : ''}</span>
+        <span class="swap-meta">共 ${b.N} 台 · 各樓層 ${b.floorUnits.join(' / ')} 台</span></span>
+        ${on ? '<span class="swap-cur">目前</span>' : ''}
+      </button>`;
+    };
+    return `<aside class="swap-drawer${swapOpen ? ' open' : ''}" id="swapDrawer" aria-label="試其他套組">
+      <div class="swap-head"><div><b>試其他套組</b><div class="muted small">選一組直接替換「${esc(plan.name)}」的裝置，牆面與平面圖保留</div></div><button class="np-x" id="swapClose" aria-label="關閉">×</button></div>
+      <div class="swap-list">${list.map(item).join('')}</div>
+    </aside>`;
+  }
 
   // ── Simple confirm dialog ──
   function askConfirm(title, detail, okLabel = '刪除') {
