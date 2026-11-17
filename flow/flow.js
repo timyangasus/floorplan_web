@@ -404,6 +404,17 @@
 
   // Build a simple house (exterior + a few interior walls) per floor and drop the bundle's
   // units onto it, so the app opens with the recommendation already placed. 100 units = 1 m.
+  // The app frames the view on the floor image ("縮放至全圖"); a plain white sheet gives the
+  // generated house a sensible initial zoom.
+  const blankCache = {};
+  function blankImage(w, h) {
+    const k = w + 'x' + h;
+    if (!blankCache[k]) {
+      try { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); blankCache[k] = c.toDataURL('image/jpeg', 0.6); }
+      catch (e) { blankCache[k] = ''; }
+    }
+    return blankCache[k];
+  }
   function buildProject(b, u) {
     const perFloor = u.area / u.floors, w = Math.sqrt(perFloor * 4 / 3), d = perFloor / w;
     const W = w * 100, D = d * 100, x0 = -W / 2, y0 = -D / 2;
@@ -422,7 +433,7 @@
         const label = isMain ? '主機 · ' + model : 'Node ' + (++node) + ' · ' + model;
         return { name: fpModel(model), displayName: label, position: { x: Math.round(x0 + W * (i + .5) / k), y: Math.round(y0 + D * (f % 2 ? .3 : .7)) }, height: 1, rotate: 0, meshGroup: null, meshRole: null, mac: null };
       });
-      return { id: 'f_' + (f + 1), floorNumber: f + 1, order: f, name: (f + 1) + 'F', floorHeight: 250, ceilingThickness: 20, ceilingType: 'concrete', anchor: { x: 0, y: 0 }, rotation: 0, scale: 1, imageWidth: 0, imageHeight: 0, floorplanImg: '', walls, routers, ceilingRegions: [], clients: [] };
+      return { id: 'f_' + (f + 1), floorNumber: f + 1, order: f, name: (f + 1) + 'F', floorHeight: 250, ceilingThickness: 20, ceilingType: 'concrete', anchor: { x: 0, y: 0 }, rotation: 0, scale: 1, imageWidth: Math.round(W * 1.3), imageHeight: Math.round(D * 1.3), floorplanImg: blankImage(Math.round(W * 1.3), Math.round(D * 1.3)), walls, routers, ceilingRegions: [], clients: [] };
     });
     const name = `推薦配置 · ${b.r.id}${b.N > 1 ? ' ＋ ' + b.n.id : ''} × ${b.N}`;
     return { demo: { projectName: name, version: 3, scale: 100, scaleSet: true, floors } };
@@ -536,13 +547,19 @@
   // Falls back to a freshly generated house when the floor count differs.
   function placeOnLayout(b, u, layout) {
     const fresh = buildProject(b, u).demo;
-    if (!layout || (layout.floors || []).length !== b.floorUnits.length) return { project: fresh, rebuilt: !!layout };
+    if (!layout || !(layout.floors || []).length) return { project: fresh, rebuilt: !!layout };
     const project = JSON.parse(JSON.stringify(layout));
     project.projectName = fresh.projectName;
+    // Floors the layout lacks are added from the generated house; extra floors are kept, without devices.
+    fresh.floors.forEach((ff, i) => { if (!project.floors[i]) project.floors.push(ff); });
     project.floors.forEach((f, i) => {
+      const gen = fresh.floors[i] ? fresh.floors[i].routers : [];
       const pts = (f.walls || []).flatMap(w => [w.start, w.end]);
-      const gen = fresh.floors[i].routers;
-      if (!pts.length) { f.routers = gen; return; }
+      if (!pts.length || !gen.length) {
+        // No walls (e.g. an uploaded plan): spread the devices over the image, else keep generated spots.
+        f.routers = f.imageWidth && f.floorplanImg ? gen.map((r, k) => ({ ...r, position: { x: Math.round((-0.5 + (k + 0.5) / gen.length) * f.imageWidth * 0.6), y: 0 } })) : gen;
+        return;
+      }
       const xs = pts.map(q => q.x), ys = pts.map(q => q.y), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
       f.routers = gen.map((r, k) => ({ ...r, position: { x: Math.round(x0 + (x1 - x0) * (k + .5) / gen.length), y: Math.round(y0 + (y1 - y0) * (i % 2 ? .3 : .7)) } }));
     });
