@@ -109,12 +109,10 @@
     save(); go('needs');
   }
 
-  // ── 0_010 Home ──
-  function renderHome(el) {
-    el.innerHTML = `<div class="page">
-      <section class="hero">
-        <h1 class="hero-title">嗨，<br>來規劃你家的 WiFi</h1>
-        <div class="hero-choices">
+  // The two ways in (推薦機種 / 居家配置), shared by 首頁 and 我的規劃's empty state.
+  let tryReturn = null; // page to stay on while the 居家配置 dialog is open
+  function homeChoices() {
+    return `<div class="hero-choices">
           <button class="choice choice-rec" id="start">
             <span class="choice-ico">${I.router}</span>
             <span class="choice-title">推薦機種</span>
@@ -127,13 +125,24 @@
             <span class="choice-desc">已經有路由器？直接在平面圖上擺放，查看每個房間的訊號覆蓋。</span>
             <span class="choice-go">→</span>
           </button>
-        </div>
+        </div>`;
+  }
+  function bindChoices(el) {
+    el.querySelectorAll('#start, [data-go-rec]').forEach(b => (b.onclick = startFresh));
+    el.querySelectorAll('#startPlan, [data-go-plan]').forEach(b => (b.onclick = () => { tryReturn = location.hash || '#home'; go('try'); }));
+  }
+
+  // ── 0_010 Home ──
+  function renderHome(el) {
+    el.innerHTML = `<div class="page">
+      <section class="hero">
+        <h1 class="hero-title">嗨，<br>來規劃你家的 WiFi</h1>
+        ${homeChoices()}
       </section>
       <div class="home-strip"><div><div class="eyebrow">能幫你做什麼</div><h2 class="promo-heading">從挑機種到擺位置，一次搞定</h2></div></div>
       ${promoBanners()}
     </div>`;
-    $('start').onclick = startFresh;
-    $('startPlan').onclick = () => go('try');
+    bindChoices(el);
     el.querySelectorAll('[data-promo]').forEach(b => (b.onclick = startFresh));
   }
 
@@ -797,8 +806,8 @@
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
         <p class="page-sub">${groups.length ? counts + '；點分頁查看它的方案' : '還沒有紀錄。看完推薦結果或進入居家配置後，會自動存在這裡。'}</p></div>
-        ${groups.length ? '<button class="btn btn-sm btn-outline" id="startNew">開始規劃 →</button>' : ''}</div>
-      ${groups.length ? `<div class="folder"><div class="ftabs" role="tablist">${groups.map(tab).join('')}</div>${panel}</div>` : (`<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
+        ${groups.length ? '<div class="plans-new"><button class="btn btn-sm btn-outline" data-go-rec>＋ 推薦機種</button><button class="btn btn-sm btn-outline btn-outline-teal" data-go-plan>＋ 居家配置</button></div>' : ''}</div>
+      ${groups.length ? `<div class="folder"><div class="ftabs" role="tablist">${groups.map(tab).join('')}</div>${panel}</div>` : homeChoices()}
     </div>`;
     el.querySelectorAll('[data-toggle]').forEach(h => (h.onclick = e => {
       if (e.target.closest('button, input')) return;
@@ -833,10 +842,7 @@
       input.onkeydown = e => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); };
       input.onblur = () => done(true);
     }));
-    const sf = $('startFirst');
-    if (sf) sf.onclick = startFresh;
-    // A fresh round of planning: start from default preferences (saved records/plans stay as they are).
-    if ($('startNew')) $('startNew').onclick = startFresh;
+    bindChoices(el);
   }
 
   function renderFloorplan(el) {
@@ -1171,7 +1177,7 @@
   // '#try' = free floor plan trial without a recommendation (used by the landing page)
   function route() {
     if (location.hash === '#try') {
-      location.replace('#home');
+      location.replace(tryReturn || '#home'); tryReturn = null;
       planSetupDialog({ needCountry: true, layoutFrom: null }).then(setup => {
         if (!setup) return;
         capturePlan();

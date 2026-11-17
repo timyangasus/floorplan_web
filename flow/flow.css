@@ -741,3 +741,6 @@ svg { display: block; }
 .choice:hover .choice-go { transform: translateX(4px); }
 @media (max-width: 640px) { .hero-choices { grid-template-columns: 1fr; } .choice { min-height: 0; } }
 .np-use-sample { align-self: center; margin-top: 10px; font-size: 13px; }
+.plans-new { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-outline-teal { color: #0e8a85; border-color: #2fbfb1; }
+.btn-outline-teal:hover { background: #e6f7f4; }
