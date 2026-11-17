@@ -542,13 +542,19 @@
     return plan;
   }
 
+  const SAMPLE_PLAN = 'flow/sample-floorplan.webp';
+  function readImage(blob, cb) {
+    const rd = new FileReader();
+    rd.onload = () => { const im = new Image(); im.onload = () => cb({ url: rd.result, w: im.naturalWidth, h: im.naturalHeight }); im.src = rd.result; };
+    rd.readAsDataURL(blob);
+  }
   // Dialog shown before a new plan opens in the editor. Resolves to the setup, or null when cancelled.
   function planSetupDialog({ needCountry, layoutFrom }) {
     return new Promise(resolve => {
       const wrap = document.createElement('div');
       wrap.className = 'ask-wrap';
       const def = '方案 ' + (store.seq + 1);
-      let source = 'default', image = null;
+      let source = 'default', image = null, sampleOff = false;
       const srcBtn = (v, ico, label) => `<button type="button" class="np-src" data-src="${v}">${ico}<span>${label}</span></button>`;
       wrap.innerHTML = `<div class="np" role="dialog" aria-modal="true" aria-labelledby="npTitle">
         <div class="np-head"><h2 id="npTitle">新增方案</h2><button class="np-x" data-a="0" aria-label="關閉">×</button></div>
@@ -571,17 +577,19 @@
         const P = q('#npPane');
         if (source === 'default') P.innerHTML = `<div class="np-info"><b>${layoutFrom ? `沿用「${esc(layoutFrom.name)}」的格局` : '使用示意格局'}</b><p>${layoutFrom ? '牆面與平面圖沿用目前方案，裝置換成這一組。' : needCountry ? '自動產生簡單的示意格局，進入後可放置路由器並調整牆面。' : '依你填的坪數與樓層自動產生簡單格局，裝置已擺好，可直接拖曳調整。'}</p></div>`;
         else if (source === 'blocks') P.innerHTML = '<div class="np-info"><b>用房間積木拼出你家</b><p>進入後從右側加入客廳、臥室、廚房等房間，拖曳排好位置，系統會自動產生牆面。</p></div>';
-        else P.innerHTML = image
-          ? `<div class="np-preview"><img src="${image.url}" alt="平面圖預覽"><button class="np-clear" id="npClear" aria-label="移除圖檔">×</button></div><p class="np-dim">${image.w} × ${image.h} px</p>`
+        else if (!image && !sampleOff) {
+          // Upload starts with a sample floor plan; × swaps it for the user's own file.
+          P.innerHTML = '<div class="np-info"><p>載入示範平面圖…</p></div>';
+          fetch(SAMPLE_PLAN).then(r => r.blob()).then(bl => readImage(bl, im => { if (!image && !sampleOff) { image = { ...im, sample: true }; pane(); } })).catch(() => { sampleOff = true; pane(); });
+        } else P.innerHTML = image
+          ? `<div class="np-preview"><img src="${image.url}" alt="平面圖預覽"><button class="np-clear" id="npClear" aria-label="移除圖檔">×</button></div><p class="np-dim">${image.sample ? '示範平面圖 · ' : ''}${image.w} × ${image.h} px${image.sample ? ' · 按 × 換成自己的圖' : ''}</p>`
           : `<label class="np-drop" id="npDrop"><input type="file" accept="image/png,image/jpeg" id="npFile" hidden><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9H7z"/><path d="M12 15V10m-2.5 2.5L12 10l2.5 2.5"/></svg><b>選擇平面圖檔案</b><span>PNG 或 JPG，建議寬度至少 1000px；進入後需設定比例尺</span></label>`;
         q('#npOk').disabled = source === 'upload' && !image;
         const file = q('#npFile');
         if (file) {
           const take = f => {
             if (!f || !/^image\/(png|jpeg)$/.test(f.type)) return toast('請選擇 PNG 或 JPG 圖檔');
-            const rd = new FileReader();
-            rd.onload = () => { const im = new Image(); im.onload = () => { image = { url: rd.result, w: im.naturalWidth, h: im.naturalHeight }; pane(); }; im.src = rd.result; };
-            rd.readAsDataURL(f);
+            readImage(f, im => { image = im; pane(); });
           };
           file.onchange = () => take(file.files[0]);
           const drop = q('#npDrop');
@@ -589,7 +597,7 @@
           drop.ondragleave = () => drop.classList.remove('over');
           drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); take(e.dataTransfer.files[0]); };
         }
-        if (q('#npClear')) q('#npClear').onclick = () => { image = null; pane(); };
+        if (q('#npClear')) q('#npClear').onclick = () => { image = null; sampleOff = true; pane(); };
       };
       wrap.querySelectorAll('.np-src').forEach(b => (b.onclick = () => { source = b.dataset.src; pane(); }));
       const done = ok => {
