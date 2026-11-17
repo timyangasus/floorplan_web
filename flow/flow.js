@@ -430,7 +430,8 @@
   // Stored in this browser only. Each plan holds a full copy of the floor plan project, so a
   // new plan copies the layout of its source and the two can then be edited independently.
   const PLANS_KEY = 'fpw_plans';
-  const PREF_KEYS = ['p', 'top', 's', 'styles', 'brands', 'tiers', 'brandOn', 'tierOn', 'includeTravel', 'area', 'areaUnit', 'floors', 'bh', 'country', 'sort'];
+  // 'round' marks one planning run: 開始規劃 starts a new one, so the same answers still make a new 推薦紀錄.
+  const PREF_KEYS = ['round', 'p', 'top', 's', 'styles', 'brands', 'tiers', 'brandOn', 'tierOn', 'includeTravel', 'area', 'areaUnit', 'floors', 'bh', 'country', 'sort'];
   let store = { activeId: null, seq: 0, plans: [] };
   try { Object.assign(store, JSON.parse(localStorage.getItem(PLANS_KEY)) || {}); } catch (e) { /* ignore */ }
   function savePlans() {
@@ -806,11 +807,12 @@
       input.onblur = () => done(true);
     }));
     const sf = $('startFirst');
-    if (sf) sf.onclick = () => go('needs');
+    if (sf) sf.onclick = () => { state.round = 'r' + Date.now(); save(); go('needs'); };
     // A fresh round of planning: start from default preferences (saved records/plans stay as they are).
     if ($('startNew')) $('startNew').onclick = () => {
       const d = initial();
       PREF_KEYS.forEach(k => (state[k] = d[k]));
+      state.round = 'r' + Date.now();
       Object.assign(state, { prefsDone: false, bundleId: null, newPlanFrom: null, inProgress: false });
       save(); go('needs');
     };
