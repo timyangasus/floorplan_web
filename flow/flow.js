@@ -75,7 +75,7 @@
     { id: 'model', code: '2_020', rail: 'rank', description: '機種詳情：規格、功能與需求適配度，可前往購買或試擺', render: renderModel },
     { id: 'exit', code: '2_030', rail: 'rank', description: '購買（約 30%）：列出所選配置，按鈕開新分頁前往 ASUS 線上購物', render: renderExit },
     { id: 'floorplan', code: '3_010', rail: 'plan', description: 'Floor plan 操作環境（約 70%）：自動存成方案；「試其他套組」回推薦結果另選，「重置擺放」讓機器回預設位置', render: renderFloorplan },
-    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：依推薦紀錄分組，展開看到從它試擺的方案；推薦紀錄刪除後方案移到「其他方案」', render: renderPlans },
+    { id: 'plans', code: '4_010', rail: 'plans', description: '我的規劃：上方為推薦紀錄（藍）與自由配置（綠）卡片，點選後下方顯示對應方案；推薦紀錄刪除後方案移到「自由配置」', render: renderPlans },
   ];
   const screenById = Object.fromEntries(SCREENS.map(s => [s.id, s]));
 
@@ -547,14 +547,14 @@
 
   // ── 4_010 我的規劃 ──
   // Grouped by 推薦紀錄: each record expands to the plans tried from it. Records and plans are
-  // deleted independently; plans whose record was deleted are gathered under 其他方案.
+  // deleted independently; plans whose record was deleted are gathered under 自由配置.
   function renderPlans(el) {
     capturePlan();
     const recs = store.plans.filter(x => !isPlan(x)).sort((x, y) => y.updatedAt - x.updatedAt);
     const plansOnly = store.plans.filter(isPlan);
     const groups = recs.map(rc => ({ key: rc.id, rec: rc, plans: triedPlans(rc.prefs).sort((x, y) => y.updatedAt - x.updatedAt) }));
     const orphans = plansOnly.filter(p => !recOf(p)).sort((x, y) => y.updatedAt - x.updatedAt);
-    // 其他方案 only appears when there are plans whose 推薦紀錄 was deleted.
+    // 自由配置 only appears when there are plans whose 推薦紀錄 was deleted.
     if (orphans.length) groups.push({ key: 'other', rec: null, plans: orphans });
     // New since the last visit: worked out once when entering the page, so badges stay during this visit.
     if (screenEntered || !plansVisitNew) {
@@ -588,37 +588,43 @@
           <div class="plan-meta muted">共 ${pl.units} 台 · ${areaOf(pl.prefs)} · ${pl.prefs.floors} 層</div>
           <div class="plan-actions"><button class="btn btn-sm" data-open="${pl.id}">開啟</button>${delBtn(pl)}</div>
         </div></div>`;
-    const groupHead = g => g.rec
-      ? `<div class="grp-icon">${g.rec.top && g.rec.top[0] ? `<img src="${productImg(g.rec.top[0])}" alt="" onerror="this.style.visibility='hidden'">` : ''}</div>
-         <div class="grp-main">
-           <div class="plan-name-row"><span class="tag tag-kind-rec">推薦紀錄</span>${isNew(g.rec) || g.plans.some(isNew) ? newTag : ''}<span class="plan-name">${esc(g.rec.name)}</span>${renameBtn(g.rec)}</div>
-           <div class="plan-meta">${esc((g.rec.top || [])[0] || '')}　<span class="muted">${esc(g.rec.prefs.p.map(i => E.primaryNames[i]).join('、'))} · ${areaOf(g.rec.prefs)} · ${g.rec.prefs.floors} 層</span></div>
-         </div>
-         ${g.plans.length ? `<span class="grp-count">${g.plans.length} 個方案</span>` : ''}
-         <button class="btn btn-ghost btn-sm" data-rec="${g.rec.id}">查看推薦</button>${delBtn(g.rec)}${created(g.rec)}`
-      : `<div class="grp-icon grp-icon-other">${I.plans}</div>
-         <div class="grp-main"><div class="plan-name-row"><span class="plan-name">其他方案</span>${g.plans.some(isNew) ? newTag : ''}</div></div>
-         <span class="grp-count">${g.plans.length ? `${g.plans.length} 個方案` : '沒有方案'}</span>`;
-    const groupBlock = g => {
-      const open = state.openGroups.includes(g.key);
-      return `<section class="grp${open ? ' open' : ''}${g.rec ? '' : ' grp-other'}">
-        <div class="grp-head" data-toggle="${g.key}"><span class="grp-chev">›</span>${groupHead(g)}</div>
-        ${open ? `<div class="grp-body">${g.plans.length ? `<div class="plan-grid">${g.plans.map(planCard).join('')}</div>` : !g.rec ? '<p class="muted small grp-empty">目前沒有其他方案。刪除推薦紀錄時，底下的方案會移到這裡。</p>' : '<p class="muted small grp-empty">還沒有從這筆推薦試擺的方案。按「查看推薦」，在推薦結果選一組「在我家試擺」。</p>'}</div>` : ''}
-      </section>`;
+    // Two-tier layout: source cards on top (推薦紀錄 = blue, 自由配置 = teal), the selected card's plans below.
+    const selKey = (state.openGroups || []).find(k => groups.some(g => g.key === k)) || (groups[0] && groups[0].key);
+    const sel = groups.find(g => g.key === selKey);
+    const srcCard = g => {
+      const on = g.key === selKey, fresh = (g.rec && isNew(g.rec)) || g.plans.some(isNew);
+      const count = `<span class="src-count">${g.plans.length ? `${g.plans.length} 個方案` : '無方案'}</span>`;
+      return g.rec
+        ? `<div class="src-card src-rec${on ? ' on' : ''}" data-toggle="${g.key}" role="button" aria-pressed="${on}">
+            <div class="src-top"><span class="src-kind">推薦紀錄</span>${fresh ? newTag : ''}${created(g.rec, 'plan-time-inline')}</div>
+            <div class="plan-name-row"><span class="plan-name">${esc(g.rec.name)}</span>${renameBtn(g.rec)}</div>
+            <div class="src-model">${g.rec.top && g.rec.top[0] ? `<img src="${productImg(g.rec.top[0])}" alt="" onerror="this.style.visibility='hidden'">` : ''}<div><div class="src-model-name">${esc((g.rec.top || [])[0] || '')}</div><div class="plan-meta muted">${esc(g.rec.prefs.p.map(i => E.primaryNames[i]).join('、'))} · ${areaOf(g.rec.prefs)} · ${g.rec.prefs.floors} 層</div></div></div>
+            <div class="src-foot">${count}<button class="link-btn" data-rec="${g.rec.id}">查看推薦</button>${delBtn(g.rec)}</div>
+          </div>`
+        : `<div class="src-card src-free${on ? ' on' : ''}" data-toggle="${g.key}" role="button" aria-pressed="${on}">
+            <div class="src-top"><span class="src-kind">自由配置</span>${fresh ? newTag : ''}</div>
+            <div class="src-model"><span class="src-ico">${I.plans}</span><div class="plan-meta muted">沒有對應推薦紀錄的方案</div></div>
+            <div class="src-foot">${count}</div>
+          </div>`;
     };
+    const detail = !sel ? '' : `<div class="src-detail">
+        <h2 class="src-detail-title">${esc(sel.rec ? sel.rec.name : '自由配置')} 的方案</h2>
+        ${sel.plans.length ? `<div class="plan-grid">${sel.plans.map(planCard).join('')}</div>`
+          : `<div class="src-empty"><p>尚無方案</p>${sel.rec ? `<button class="btn btn-sm" data-rec-try="${sel.rec.id}">在我家試擺</button>` : ''}</div>`}
+      </div>`;
     const counts = [recs.length ? `${recs.length} 筆推薦紀錄` : '', plansOnly.length ? `${plansOnly.length} 個方案` : ''].filter(Boolean).join(' · ');
     el.innerHTML = `<div class="page">
       <div class="res-head"><div><div class="eyebrow">我的規劃</div><h1 class="page-title" style="margin-top:6px">我的家</h1>
-        <p class="page-sub">${groups.length ? counts + '；點推薦紀錄展開從它試擺的方案' : '還沒有紀錄。看完推薦結果或進入居家配置後，會自動存在這裡。'}</p></div>
+        <p class="page-sub">${groups.length ? counts + '；點上方卡片查看它的方案' : '還沒有紀錄。看完推薦結果或進入居家配置後，會自動存在這裡。'}</p></div>
         ${groups.length ? '<button class="btn btn-sm btn-outline" id="startNew">開始規劃 →</button>' : ''}</div>
-      ${groups.length ? `<div class="grp-list">${groups.map(groupBlock).join('')}</div>` : (`<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
+      ${groups.length ? `<div class="src-row">${groups.map(srcCard).join('')}</div>${detail}` : (`<button class="btn" id="startFirst" style="margin-top:24px">開始規劃 →</button>`)}
     </div>`;
     el.querySelectorAll('[data-toggle]').forEach(h => (h.onclick = e => {
       if (e.target.closest('button, input')) return;
-      const k = h.dataset.toggle;
-      state.openGroups = state.openGroups.includes(k) ? [] : [k]; // accordion: one group open at a time
+      state.openGroups = [h.dataset.toggle]; // one source card selected at a time
       save(); rerenderKeepScroll();
     }));
+    el.querySelectorAll('[data-rec-try]').forEach(b => (b.onclick = () => openRecord(b.dataset.recTry, true)));
     el.querySelectorAll('[data-open]').forEach(b => (b.onclick = () => openPlan(b.dataset.open)));
     el.querySelectorAll('[data-rec]').forEach(b => (b.onclick = () => openRecord(b.dataset.rec)));
     el.querySelectorAll('[data-del]').forEach(b => (b.onclick = async e => {
@@ -626,7 +632,7 @@
       const x = store.plans.find(y => y.id === b.dataset.del);
       if (!x) return;
       const n = isPlan(x) ? 0 : triedPlans(x.prefs).length;
-      const ok = await askConfirm(`刪除「${x.name}」？`, isPlan(x) ? '刪除後無法復原。' : n ? `底下 ${n} 個方案不會刪除，會移到「其他方案」。` : '刪除後無法復原。');
+      const ok = await askConfirm(`刪除「${x.name}」？`, isPlan(x) ? '刪除後無法復原。' : n ? `底下 ${n} 個方案不會刪除，會移到「自由配置」。` : '刪除後無法復原。');
       if (!ok) return;
       store.plans = store.plans.filter(y => y.id !== x.id);
       if (store.activeId === x.id) { const nxt = store.plans.find(isPlan); store.activeId = nxt ? nxt.id : null; state.loadedPlanId = null; save(); }
@@ -694,7 +700,7 @@
         if (state.loadedPlanId !== cur.id) fresh = loadPlanIntoApp(cur);
       }
     }
-    // Plans whose 推薦紀錄 was deleted (其他方案) stay as they are: no 試其他套組.
+    // Plans whose 推薦紀錄 was deleted (自由配置) stay as they are: no 試其他套組.
     const orphan = !!plan && !recOf(plan);
     const ids = plan ? plan.bundleId.split('|') : [];
     const mapped = ids.slice(0, 2).filter((id, i, a) => id && a.indexOf(id) === i && FP_MODEL[id] && FP_MODEL[id] !== id);
@@ -786,7 +792,7 @@
     if (currentId() === 'home') render(); else go('home');
   };
 
-  // Demo data for meetings: 2 推薦紀錄 (2 + 1 plans) and 3 其他方案 (plans without a record).
+  // Demo data for meetings: 2 推薦紀錄 (2 + 1 plans) and 3 自由配置 (plans without a record).
   function seedDemo() {
     const day = 86400000;
     const scenarios = [
