@@ -270,7 +270,7 @@
     const cfgText = b => `${esc(b.r.id)} × 1${b.N > 1 ? ` ＋ ${esc(b.n.id)} × ${b.N - 1}` : ''}<span class="muted">　共 ${b.N} 台</span>`;
     const tags = [u.p.map(i => E.primaryNames[i] + (i === u.top && u.p.length > 1 ? '★' : '')).join('、'), ...u.s.map(i => E.secondaryNames[i]), areaText(u.area), `${u.floors} 層`, u.bh === 'wired' ? '有線回程' : '無線回程', state.brands.length ? '品牌：' + state.brands.join('／') : null, state.tiers.length ? '定位：' + state.tiers.map(t => E.tierNames[t]).join('／') : null].filter(Boolean);
     el.innerHTML = `<div class="page">
-      <div class="res-head"><div><div class="eyebrow">推薦結果</div><div class="title-row"><h1 class="page-title">這些機種最適合你家</h1><button class="btn btn-ghost btn-sm" id="edit">修改條件</button></div><div class="summary-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}</div></div>
+      <div class="res-head"><div><div class="eyebrow">推薦結果</div><div class="title-row"><h1 class="page-title">這些機種最適合你家</h1></div><div class="summary-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}<button class="link-btn tags-edit" id="edit">修改條件</button></div></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="seg" id="sort"><button data-v="balanced" class="${state.sort !== 'cost' ? 'on' : ''}">平衡推薦</button><button data-v="cost" class="${state.sort === 'cost' ? 'on' : ''}">較低花費優先</button></div></div></div>
       ${u.country !== 'TW' ? '<div class="card empty" style="margin-top:24px">此地區尚未建立價表與可推薦機種，請改選台灣。</div>' : `
       <div class="section-head"><div><h2>推薦機種</h2><div class="muted small">依你的需求與空間挑出的前 3 名 · 點卡片看詳情</div></div></div>
