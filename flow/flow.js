@@ -932,7 +932,7 @@
       const on = bundleKey(b) === plan.bundleId;
       return `<button class="swap-item${on ? ' on' : ''}" data-swap="${esc(bundleKey(b))}" ${on ? 'aria-current="true"' : ''}>
         <img src="${productImg(b.r.id)}" alt="" onerror="this.style.visibility='hidden'">
-        <span class="swap-main"><span class="swap-name">${rankTag(i + 1)}${esc(b.r.id)}${b.N > 1 ? ` <span class="muted">＋ ${esc(b.n.id)}</span>` : ''}</span>
+        <span class="swap-main"><span class="swap-name">${i < 3 ? rankTag(i + 1) : ''}${esc(b.r.id)}${b.N > 1 ? ` <span class="muted">＋ ${esc(b.n.id)}</span>` : ''}</span>
         <span class="swap-meta">共 ${b.N} 台 · 各樓層 ${b.floorUnits.join(' / ')} 台</span></span>
         ${on ? '<span class="swap-cur">目前</span>' : ''}
       </button>`;
