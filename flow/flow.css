@@ -691,3 +691,32 @@ svg { display: block; }
 .swap-meta { font-size: 12px; color: var(--ink-3); }
 .swap-cur { font-size: 12px; font-weight: 600; color: var(--accent-2); white-space: nowrap; }
 .btn.on { box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* 我的規劃: folder tabs + panel */
+.folder { margin-top: 22px; }
+.ftabs { display: flex; gap: 4px; flex-wrap: wrap; align-items: flex-end; padding-left: 12px; position: relative; z-index: 1; }
+.ftab { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 12px 12px 0 0; border: 1.5px solid transparent; border-bottom: 0; background: rgba(0, 0, 0, .035); color: var(--ink-2); font-size: 14px; cursor: pointer; position: relative; transition: background .15s; }
+.ftab:hover { background: rgba(0, 0, 0, .06); }
+.ftab-dot { width: 8px; height: 8px; border-radius: 50%; }
+.ftab-rec .ftab-dot { background: #5b9bff; }
+.ftab-free .ftab-dot { background: #2fbfb1; }
+.ftab-count { font-size: 12px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: rgba(0, 0, 0, .06); color: var(--ink-2); }
+.ftab-new { width: 7px; height: 7px; border-radius: 50%; background: #ff7a1a; position: absolute; top: 7px; right: 7px; }
+.ftab.on { color: var(--ink); font-weight: 600; margin-bottom: -1.5px; padding-bottom: 11.5px; }
+.ftab-rec.on { background: #f6f9ff; border-color: #cfe0fb; }
+.ftab-free.on { background: #f3fbf9; border-color: #c9ece6; }
+.fpanel { border: 1.5px solid; border-radius: 16px; padding: 18px 20px 22px; }
+.fpanel-rec { background: #f6f9ff; border-color: #cfe0fb; }
+.fpanel-free { background: #f3fbf9; border-color: #c9ece6; }
+.fpanel-head { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 1px solid rgba(0, 0, 0, .07); flex-wrap: wrap; }
+.fpanel-ico { width: 52px; height: 52px; border-radius: 12px; background: #fff; display: grid; place-items: center; padding: 4px; flex-shrink: 0; }
+.fpanel-ico img { width: 100%; height: 100%; object-fit: contain; }
+.fpanel-ico-free { color: #0e9f9a; }
+.fpanel-ico-free svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.fpanel-main { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px; }
+.fpanel-actions { display: flex; align-items: center; gap: 12px; }
+.fpanel-rec .src-kind { color: #2f6fd8; background: #e6effd; }
+.fpanel-free .src-kind { color: #0e8a85; background: #dcf3ef; }
+.fpanel-sub { font-size: 13px; color: var(--ink-3); margin-top: 14px; }
+.fpanel .plan-grid { margin-top: 10px; }
+.fpanel .src-empty { background: rgba(255, 255, 255, .6); }
