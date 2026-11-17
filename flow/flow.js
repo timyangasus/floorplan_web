@@ -16,7 +16,7 @@
   const save = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) { /* ignore */ } };
 
   function engineInput() {
-    return { p: state.p, s: state.s, top: state.p.includes(state.top) ? state.top : state.p[0], style: state.styles.length === 2 ? 'both' : state.styles[0] || 'none', modelBrands: state.brands, bundleBrands: state.brands, modelTiers: state.tiers, bundleTiers: state.tiers, includeTravel: state.includeTravel, country: state.country, area: state.area, floors: state.floors, sort: state.sort, bh: state.bh };
+    return { p: state.p, s: state.s, top: state.p.includes(state.top) ? state.top : state.p[0], style: state.styles.length === 2 ? 'both' : state.styles[0] || 'none', modelBrands: state.brands, bundleBrands: state.brands, modelTiers: state.tiers, bundleTiers: state.tiers, includeTravel: state.includeTravel, country: state.country, area: state.area, floors: state.floors, sort: 'balanced', bh: state.bh };
   }
   function results() {
     const c = E.catalog(), u = engineInput();
@@ -267,8 +267,7 @@
         <div class="res-filter"><span class="res-filter-label">產品定位</span><div class="chips">${fchip('tier', '', '全部', !state.tiers.length)}${['入門', '中階', '高階'].map(v => fchip('tier', v, E.tierNames[v], state.tiers.includes(v))).join('')}</div></div>
       </div>`;
     el.innerHTML = `<div class="page">
-      <div class="res-head"><div><div class="eyebrow">推薦結果</div><div class="title-row"><h1 class="page-title">這些機種最適合你家</h1></div><div class="summary-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}<button class="link-btn tags-edit" id="edit">修改條件</button></div></div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><div class="seg" id="sort"><button data-v="balanced" class="${state.sort !== 'cost' ? 'on' : ''}">平衡推薦</button><button data-v="cost" class="${state.sort === 'cost' ? 'on' : ''}">較低花費優先</button></div></div></div>
+      <div class="res-head"><div><div class="eyebrow">推薦結果</div><div class="title-row"><h1 class="page-title">這些機種最適合你家</h1></div><div class="summary-tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}<button class="link-btn tags-edit" id="edit">修改條件</button></div></div></div>
       ${filters}
       ${u.country !== 'TW' ? '<div class="card empty" style="margin-top:24px">此地區尚未建立價表與可推薦機種，請改選台灣。</div>' : `
       <div class="section-head"><div><h2>推薦機種</h2><div class="muted small">依你的需求與空間挑出的前 3 名 · 點卡片看詳情</div></div></div>
@@ -307,7 +306,6 @@
       state.brandOn = !!state.brands.length; state.tierOn = !!state.tiers.length;
       save(); rerenderKeepScroll();
     }));
-    $('sort').querySelectorAll('button').forEach(b => (b.onclick = () => { state.sort = b.dataset.v; save(); rerenderKeepScroll(); }));
     el.querySelectorAll('[data-model]').forEach(c => (c.onclick = () => { state.modelId = c.dataset.model; save(); go('model'); }));
     el.querySelectorAll('[data-try]').forEach(b => (b.onclick = () => { pickBundle(bundles[+b.dataset.try]); go('floorplan'); }));
     el.querySelectorAll('[data-try-model]').forEach(b => (b.onclick = e => { e.stopPropagation(); pickBundle(bestFor(b.dataset.tryModel)); go('floorplan'); }));
