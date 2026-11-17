@@ -653,7 +653,7 @@
     const plan = store.plans.find(x => x.id === id);
     if (!plan) return;
     Object.assign(state, JSON.parse(JSON.stringify(plan.prefs)));
-    swapOpen = false;
+    swapOpen = false; swapTab = null;
     state.bundleId = plan.bundleId || null; state.prefsDone = !plan.free || state.prefsDone; state.newPlanFrom = null; state.seededKey = null;
     store.activeId = plan.id; savePlans();
     loadPlanIntoApp(plan);
@@ -878,11 +878,21 @@
       <iframe class="fp-frame" id="fpFrame" title="ASUS WiFi Floorplan" src="${FP_SRC}${fresh ? '?t=' + Date.now() : ''}"></iframe></div>
     </div>`;
     if ($('swap')) $('swap').onclick = () => { swapOpen = !swapOpen; $('swapDrawer').classList.toggle('open', swapOpen); $('swap').classList.toggle('on', swapOpen); };
-    if ($('swapClose')) $('swapClose').onclick = () => { swapOpen = false; $('swapDrawer').classList.remove('open'); $('swap').classList.remove('on'); };
-    el.querySelectorAll('[data-swap]').forEach(btn => (btn.onclick = () => {
-      const nb = allBundles.find(x => bundleKey(x) === btn.dataset.swap);
-      if (nb && plan && bundleKey(nb) !== plan.bundleId) swapBundle(plan, nb);
-    }));
+    // Drawer handlers; switching tabs redraws only the drawer so the editor is not reloaded.
+    const bindDrawer = () => {
+      if (!$('swapDrawer')) return;
+      $('swapClose').onclick = () => { swapOpen = false; $('swapDrawer').classList.remove('open'); $('swap').classList.remove('on'); };
+      $('swapDrawer').querySelectorAll('[data-swap-tab]').forEach(t => (t.onclick = () => {
+        swapTab = t.dataset.swapTab;
+        const tmp = document.createElement('div'); tmp.innerHTML = swapDrawer(plan);
+        $('swapDrawer').replaceWith(tmp.firstElementChild); bindDrawer();
+      }));
+      $('swapDrawer').querySelectorAll('[data-swap]').forEach(btn => (btn.onclick = () => {
+        const nb = allBundles.find(x => bundleKey(x) === btn.dataset.swap);
+        if (nb && plan && bundleKey(nb) !== plan.bundleId) swapBundle(plan, nb);
+      }));
+    };
+    bindDrawer();
     if ($('reseed')) $('reseed').onclick = async () => {
       if (!await askConfirm('重置擺放？', '機器會回到預設位置，你調整過的位置會被取代；牆和平面圖會保留。', '重置')) return;
       capturePlan();
@@ -910,26 +920,28 @@
     const msg = [note, floorList.length ? `這組分在 ${floorList.length} 個樓層，點上方樓層切換查看` : ''].filter(Boolean);
     msg.forEach((m, i) => pendingToasts.push(setTimeout(() => toast(m), 900 + i * 2200)));
   }
-  let floorSyncTimer, captureTimer, pendingToasts = [], planSetup = null, swapOpen = false;
+  let floorSyncTimer, captureTimer, pendingToasts = [], planSetup = null, swapOpen = false, swapTab = null;
   // Right-side drawer listing the recommendation's bundles; picking one swaps the plan's devices.
   function swapDrawer(plan) {
     const { models, bundles, allBundles } = results();
-    const best = models.slice(0, 3).map(m => allBundles.find(b => b.r.id === m.id)).filter(Boolean);
-    const list = [...best, ...bundles].filter((b, i, a) => a.findIndex(x => bundleKey(x) === bundleKey(b)) === i);
-    const cur = allBundles.find(b => bundleKey(b) === plan.bundleId);
-    if (cur && !list.some(b => bundleKey(b) === plan.bundleId)) list.unshift(cur);
+    // 推薦機種: best config of each top model (same as the results cards); 推薦組合: the top bundles.
+    const modelList = models.slice(0, 3).map(m => allBundles.find(b => b.r.id === m.id)).filter(Boolean);
+    const lists = { model: modelList, bundle: bundles };
+    if (!swapTab) swapTab = !modelList.some(b => bundleKey(b) === plan.bundleId) && bundles.some(b => bundleKey(b) === plan.bundleId) ? 'bundle' : 'model';
     const item = (b, i) => {
       const on = bundleKey(b) === plan.bundleId;
       return `<button class="swap-item${on ? ' on' : ''}" data-swap="${esc(bundleKey(b))}" ${on ? 'aria-current="true"' : ''}>
         <img src="${productImg(b.r.id)}" alt="" onerror="this.style.visibility='hidden'">
-        <span class="swap-main"><span class="swap-name">${i === 0 ? '<span class="tag tag-rank1">★</span>' : ''}${esc(b.r.id)}${b.N > 1 ? ` <span class="muted">＋ ${esc(b.n.id)}</span>` : ''}</span>
+        <span class="swap-main"><span class="swap-name">${rankTag(i + 1)}${esc(b.r.id)}${b.N > 1 ? ` <span class="muted">＋ ${esc(b.n.id)}</span>` : ''}</span>
         <span class="swap-meta">共 ${b.N} 台 · 各樓層 ${b.floorUnits.join(' / ')} 台</span></span>
         ${on ? '<span class="swap-cur">目前</span>' : ''}
       </button>`;
     };
+    const tabBtn = (k, label) => `<button class="${swapTab === k ? 'on' : ''}" data-swap-tab="${k}">${label}</button>`;
     return `<aside class="swap-drawer${swapOpen ? ' open' : ''}" id="swapDrawer" aria-label="試其他套組">
       <div class="swap-head"><div><b>試其他套組</b><div class="muted small">選一組直接替換「${esc(plan.name)}」的裝置，牆面與平面圖保留</div></div><button class="np-x" id="swapClose" aria-label="關閉">×</button></div>
-      <div class="swap-list">${list.map(item).join('')}</div>
+      <div class="swap-tabs"><div class="seg seg-sm">${tabBtn('model', '推薦機種')}${tabBtn('bundle', '推薦組合')}</div></div>
+      <div class="swap-list">${lists[swapTab].length ? lists[swapTab].map(item).join('') : '<p class="muted small" style="padding:8px">沒有符合條件的組合</p>'}</div>
     </aside>`;
   }
 
