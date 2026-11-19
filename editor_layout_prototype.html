@@ -134,9 +134,9 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .toast { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); background: #1d2633; color: #fff; border-radius: 8px; padding: 8px 14px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 200; }
 .toast.show { opacity: 1; }
 /* info button + guide popover (replaces the always-on note) */
-.info-btn { position: absolute; left: 18px; top: 16px; width: 34px; height: 34px; border-radius: 50%; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); display: grid; place-items: center; z-index: 5; font: 700 16px/1 Georgia, serif; font-style: italic; color: var(--act); }
+.info-btn { width: 30px; height: 30px; border-radius: 50%; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; flex-shrink: 0; font: 700 16px/1 Georgia, serif; font-style: italic; color: var(--act); }
 .info-btn:hover, .info-btn.on { background: var(--act); color: #fff; border-color: var(--act); }
-.guide { position: absolute; left: 18px; top: 60px; width: 340px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 36px rgba(16,32,56,.16); z-index: 6; padding: 16px 18px 14px; }
+.guide { position: absolute; right: 12px; top: 12px; width: 340px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 36px rgba(16,32,56,.16); z-index: 25; padding: 16px 18px 14px; }
 .guide[hidden] { display: none; }
 .g-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .g-step { font-size: 12px; color: var(--act); font-weight: 600; }
@@ -210,6 +210,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
       </div>
       <span class="sep"></span>
       <div class="login">登入即可儲存進度、跨裝置存取 <button class="login-btn" id="loginBtn">登入</button></div>
+      <button class="info-btn" id="infoBtn" data-tip="使用說明" aria-label="使用說明" aria-expanded="false">i</button>
     </div>
   </header>
 
@@ -228,7 +229,6 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
       <div class="dev" style="left:45%;top:44%"><span class="dot"><svg class="i"><use href="#i-device"/></svg></span><span class="name">主機 · GT-BE19000AI</span></div>
       <div class="dev" style="left:71%;top:56%"><span class="dot"><svg class="i"><use href="#i-device"/></svg></span><span class="name">Node 1 · BT8</span></div>
     </div>
-    <button class="info-btn" id="infoBtn" data-tip="使用說明" aria-label="使用說明" aria-expanded="false">i</button>
     <div class="guide" id="guide" hidden role="dialog" aria-label="使用說明">
       <div class="g-head"><span class="g-step" id="gStep"></span><button class="ib" id="gClose" aria-label="關閉說明"><svg class="i"><use href="#i-x"/></svg></button></div>
       <h3 id="gTitle"></h3>
@@ -367,7 +367,7 @@ $('dimBtn').onclick = () => { three = !three; $('dimBtn').textContent = three ? 
 $('panBtn').onclick = () => { panning = !panning; $('panBtn').classList.toggle('on', panning); $('stage').classList.toggle('panning', panning); };
 $('sliceBtn').onclick = e => { e.stopPropagation(); const p = $('slicePop'); p.hidden = !p.hidden; $('sliceBtn').classList.toggle('on', !p.hidden); };
 $('slice').oninput = e => { $('sliceVal').textContent = (e.target.value / 100).toFixed(1) + ' m'; };
-document.addEventListener('click', e => { if (!e.target.closest('#slicePop') && !e.target.closest('#sliceBtn')) { $('slicePop').hidden = true; $('sliceBtn').classList.remove('on'); } });
+document.addEventListener('click', e => { if (!e.target.closest('#guide, #infoBtn, #railHelp')) showGuide(false); if (!e.target.closest('#slicePop') && !e.target.closest('#sliceBtn')) { $('slicePop').hidden = true; $('sliceBtn').classList.remove('on'); } });
 document.querySelectorAll('[data-band]').forEach(b => b.onclick = () => { document.querySelectorAll('[data-band]').forEach(x => x.classList.remove('on')); b.classList.add('on'); });
 $('undo').onclick = () => toast('示意：已復原上一步');
 $('redo').onclick = () => toast('示意：已重做');
@@ -416,7 +416,6 @@ if (img0.complete) doFit(); else img0.onload = doFit;
 addEventListener('resize', doFit);
 // guide: 7 steps behind the i button
 const GUIDE = [
-  ['歡迎', '在平面圖上擺放 ASUS 路由器，即時看到 Wi-Fi 覆蓋範圍與 Mesh 回程品質。這份示意只示範工具、面板、檢視控制的位置與開關。'],
   ['上傳平面圖', '從專案選單上傳平面圖圖片，或用「積木拼平面圖」直接拼出房間格局。'],
   ['設定比例尺', '按狀態列的「比例尺」，在圖上點兩點畫出一段已知長度，輸入實際距離。'],
   ['繪製牆面', '按 <kbd>W</kbd> 開啟繪製牆面，右側面板選材質；點擊連續畫牆，<kbd>Esc</kbd> 或右鍵結束。'],
