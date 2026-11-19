@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>編輯頁版面示意 · 方向 A</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: top bar / app rail / canvas / collapsible right panel / status bar — 方向 A 決議版 */
+:root {
+  --ink: #172336; --muted: #56657a; --faint: #8a96a8;
+  --line: #dee6ef; --btn: #f1f5f9; --btn-hover: #e6edf5;
+  --act: #07569a; --act-soft: #eaf3fd;
+  --canvas: #f5f8fc; --card: #ffffff;
+  --shadow: 0 2px 10px rgba(16, 32, 56, .08);
+  --font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { font-family: var(--font); color: var(--ink); background: var(--canvas); font-size: 14px; overflow: hidden; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+.app { height: 100%; display: grid; grid-template-rows: 56px 1fr 41px; grid-template-columns: 68px 1fr auto; grid-template-areas: "top top top" "rail stage panel" "rail status panel"; }
+
+/* top bar */
+.top { grid-area: top; background: var(--card); border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 20px 0 90px; position: relative; z-index: 20; }
+.proj { display: flex; align-items: center; gap: 16px; }
+.proj-name { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.proj-name .i { width: 15px; height: 15px; color: var(--faint); }
+.floor { display: flex; align-items: center; gap: 4px; background: var(--btn); border-radius: 7px; padding: 7px 8px 7px 12px; font-weight: 500; }
+.floor .i { width: 16px; height: 16px; }
+.tools, .grp, .right { display: flex; align-items: center; }
+.tools { gap: 10px; }
+.grp { gap: 4px; }
+.sep { width: 1px; height: 22px; background: var(--line); }
+.ib { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; position: relative; transition: background .12s; }
+.ib:hover { background: var(--btn-hover); }
+.ib.on { background: var(--act); color: #fff; }
+.ib:focus-visible, .floor:focus-visible, .login-btn:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+.right { justify-content: flex-end; gap: 12px; }
+.login { display: flex; align-items: center; gap: 10px; background: var(--act-soft); border-radius: 18px; padding: 4px 4px 4px 12px; font-size: 12px; color: var(--muted); }
+.login-btn { background: var(--act); color: #fff; border-radius: 14px; padding: 5px 12px; font-weight: 500; }
+
+/* tooltip: below the button, never over the hint */
+.tip { position: fixed; z-index: 100; background: #1d2633; color: #fff; font-size: 12px; padding: 5px 8px; border-radius: 6px; pointer-events: none; white-space: nowrap; display: flex; gap: 8px; align-items: center; opacity: 0; transition: opacity .1s; }
+.tip kbd { font-family: inherit; font-size: 11px; background: rgba(255,255,255,.18); border-radius: 4px; padding: 0 5px; }
+.tip.show { opacity: 1; }
+
+/* rail */
+.rail { grid-area: rail; background: var(--card); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 6px; }
+.rail a { font-size: 12px; color: var(--muted); text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: 10px; width: 56px; }
+.rail a.on { color: var(--act); background: var(--act-soft); font-weight: 500; }
+.rail .spacer { flex: 1; }
+
+/* stage */
+.stage { grid-area: stage; position: relative; overflow: hidden; }
+.world { position: absolute; left: 50%; top: 50%; width: 900px; transform-origin: center; transition: transform .25s ease; }
+.world img { width: 100%; display: block; user-select: none; -webkit-user-drag: none; border-radius: 4px; background: #fff; box-shadow: var(--shadow); }
+.world .heat { position: absolute; border-radius: 50%; pointer-events: none; mix-blend-mode: multiply; }
+.dev { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dev span.dot { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2px solid var(--act); display: grid; place-items: center; color: var(--act); box-shadow: var(--shadow); }
+.dev span.dot .i { width: 16px; height: 16px; }
+.dev span.name { font-size: 11px; background: rgba(23, 35, 54, .85); color: #fff; border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.stage.panning { cursor: grab; }
+.stage.panning:active { cursor: grabbing; }
+.stage.three .world { filter: drop-shadow(0 30px 30px rgba(0,0,0,.12)); }
+
+/* view controls */
+.view { position: absolute; left: 18px; bottom: 16px; display: flex; align-items: center; gap: 2px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px 6px; box-shadow: var(--shadow); z-index: 5; }
+.view .pct { font-size: 12px; font-weight: 500; min-width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
+.view .dim { font-weight: 700; font-size: 13px; padding: 0 10px; height: 36px; border-radius: 8px; }
+.view .dim:hover { background: var(--btn-hover); }
+.pop { position: absolute; bottom: 64px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(16,32,56,.14); padding: 14px 16px; z-index: 6; width: 240px; }
+.pop h4 { margin: 0 0 10px; font-size: 14px; }
+.pop input[type=range] { width: 100%; }
+.pop .row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+/* status bar */
+.status { grid-area: status; background: var(--card); border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 20px; gap: 16px; font-size: 13px; color: var(--muted); min-width: 0; }
+.hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend { display: flex; align-items: center; gap: 14px; }
+.legend b { color: var(--ink); }
+.legend button { color: var(--muted); }
+.legend button.on { color: var(--act); font-weight: 700; }
+.bar { display: flex; width: 120px; height: 4px; border-radius: 2px; overflow: hidden; }
+.bar i { flex: 1; }
+.st-right { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+.scale-btn { color: var(--act); font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.scale-btn .i { width: 14px; height: 14px; }
+.scale-btn.warn { color: #c2620a; }
+
+/* right panel */
+.panel { grid-area: panel; width: 0; overflow: hidden; background: var(--card); border-left: 1px solid transparent; transition: width .2s ease; }
+.panel.open { width: 332px; border-left-color: var(--line); }
+.panel-in { width: 332px; height: 100%; display: flex; flex-direction: column; }
+.ph { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+.ph h2 { margin: 0; font-size: 20px; }
+.pb { padding: 18px 24px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.pb .lbl { font-weight: 700; font-size: 14px; }
+.pb .sub { font-size: 12px; color: var(--muted); margin-top: -10px; }
+.wide { background: var(--btn); border-radius: 7px; padding: 9px 12px; text-align: left; font-weight: 500; }
+.seg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.seg2 button { background: var(--btn); border-radius: 7px; padding: 9px 12px; text-align: left; font-weight: 500; }
+.seg2 button.on { background: var(--act); color: #fff; }
+.mat { display: flex; flex-direction: column; gap: 4px; margin: 0 -8px; }
+.mat button { display: grid; grid-template-columns: 12px 1fr auto 14px; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 6px; text-align: left; }
+.mat button:hover { background: var(--btn); }
+.mat button.on { background: var(--act-soft); }
+.mat .sw { width: 12px; height: 12px; border-radius: 50%; }
+.mat .db { font-size: 12px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+.chip.on { border-color: var(--act); color: var(--act); background: var(--act-soft); }
+.search { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font: inherit; width: 100%; }
+.devlist { display: flex; flex-direction: column; gap: 2px; margin: 0 -8px; }
+.devlist button { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; text-align: left; }
+.devlist button:hover { background: var(--btn); }
+.devlist .ph-img { width: 36px; height: 36px; border-radius: 8px; background: var(--btn); display: grid; place-items: center; color: var(--muted); }
+.devlist small { margin-left: auto; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; }
+.objs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.objs button { aspect-ratio: 1; border: 1px solid var(--line); border-radius: 8px; display: grid; place-items: center; color: var(--muted); }
+.objs button.on { border-color: var(--act); color: var(--act); background: var(--act-soft); }
+.toggle { display: flex; justify-content: space-between; align-items: center; }
+.sw2 { width: 34px; height: 20px; border-radius: 10px; background: #cfd8e3; position: relative; transition: background .15s; }
+.sw2::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left .15s; }
+.sw2.on { background: var(--act); }
+.sw2.on::after { left: 17px; }
+.groups { display: flex; flex-direction: column; gap: 8px; }
+.groups div { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; color: var(--muted); }
+
+/* toast + demo note */
+.toast { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); background: #1d2633; color: #fff; border-radius: 8px; padding: 8px 14px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 200; }
+.toast.show { opacity: 1; }
+.note { position: absolute; right: 16px; top: 14px; background: rgba(255,255,255,.92); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--muted); max-width: 260px; line-height: 1.6; z-index: 4; }
+.note b { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-select" viewBox="0 0 24 24"><path d="M5 4l6.5 16 2.3-6.7L20.5 11z"/></symbol>
+  <symbol id="i-wall" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 12h17M12 3.5v17"/></symbol>
+  <symbol id="i-object" viewBox="0 0 24 24"><path d="M4 20h4v-4h4v-4h4V8h4"/></symbol>
+  <symbol id="i-slab" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1" stroke-dasharray="3 3"/></symbol>
+  <symbol id="i-device" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 13V8M17 13V8M7 16.5h.01M10.5 16.5h.01"/></symbol>
+  <symbol id="i-client" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><path d="M12 19.5h.01"/></symbol>
+  <symbol id="i-mesh" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></symbol>
+  <symbol id="i-pan" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></symbol>
+  <symbol id="i-zout" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-4-4"/></symbol>
+  <symbol id="i-zin" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M11 8v6M20 20l-4-4"/></symbol>
+  <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+  <symbol id="i-slice" viewBox="0 0 24 24"><path d="M12 3v6M9 6l3-3 3 3M12 21v-6M9 18l3 3 3-3M4 12h16"/></symbol>
+  <symbol id="i-view" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/></symbol>
+  <symbol id="i-elev" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M5 3l14 18M19 3L5 21"/></symbol>
+</svg>
+
+<div class="app">
+  <header class="top">
+    <div class="proj">
+      <div class="proj-name">示範專案 <svg class="i"><use href="#i-edit"/></svg></div>
+      <button class="floor" id="floorBtn">1 樓 <svg class="i"><use href="#i-down"/></svg></button>
+    </div>
+    <nav class="tools" aria-label="工具">
+      <div class="grp"><button class="ib on" data-tool="select" data-tip="選取|V"><svg class="i"><use href="#i-select"/></svg></button></div>
+      <span class="sep"></span>
+      <div class="grp">
+        <button class="ib" data-tool="wall" data-tip="繪製牆面|W"><svg class="i"><use href="#i-wall"/></svg></button>
+        <button class="ib" data-tool="object" data-tip="放置物品|P"><svg class="i"><use href="#i-object"/></svg></button>
+        <button class="ib" data-tool="slab" data-tip="繪製樓板|F"><svg class="i"><use href="#i-slab"/></svg></button>
+      </div>
+      <span class="sep"></span>
+      <div class="grp">
+        <button class="ib" data-tool="device" data-tip="放置裝置|D"><svg class="i"><use href="#i-device"/></svg></button>
+        <button class="ib" data-tool="client" data-tip="用戶端體驗|E"><svg class="i"><use href="#i-client"/></svg></button>
+        <button class="ib" data-tool="mesh" data-tip="Mesh 群組|M"><svg class="i"><use href="#i-mesh"/></svg></button>
+      </div>
+    </nav>
+    <div class="right">
+      <div class="grp">
+        <button class="ib" id="undo" data-tip="復原|Ctrl Z"><svg class="i"><use href="#i-undo"/></svg></button>
+        <button class="ib" id="redo" data-tip="重做|Ctrl Shift Z"><svg class="i"><use href="#i-redo"/></svg></button>
+      </div>
+      <span class="sep"></span>
+      <div class="login">登入即可儲存進度、跨裝置存取 <button class="login-btn" id="loginBtn">登入</button></div>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="應用程式">
+    <a href="#" class="on"><svg class="i"><use href="#i-grid"/></svg>專案</a>
+    <a href="#"><svg class="i"><use href="#i-share"/></svg>分享</a>
+    <span class="spacer"></span>
+    <a href="#"><svg class="i"><use href="#i-help"/></svg>說明</a>
+  </nav>
+
+  <main class="stage" id="stage">
+    <div class="world" id="world">
+      <img src="flow/sample-floorplan.webp" alt="示範平面圖">
+      <div class="heat" style="left:22%;top:18%;width:46%;aspect-ratio:1;background:radial-gradient(circle, rgba(75,227,160,.55), rgba(255,210,94,.35) 55%, rgba(255,122,122,0) 75%)"></div>
+      <div class="heat" style="left:48%;top:30%;width:46%;aspect-ratio:1;background:radial-gradient(circle, rgba(75,227,160,.55), rgba(255,210,94,.35) 55%, rgba(255,122,122,0) 75%)"></div>
+      <div class="dev" style="left:45%;top:44%"><span class="dot"><svg class="i"><use href="#i-device"/></svg></span><span class="name">主機 · GT-BE19000AI</span></div>
+      <div class="dev" style="left:71%;top:56%"><span class="dot"><svg class="i"><use href="#i-device"/></svg></span><span class="name">Node 1 · BT8</span></div>
+    </div>
+    <div class="note"><b>版面示意（方向 A）</b><br>只示範工具、面板、檢視控制的位置與開關，不含真實編輯功能。快捷鍵 V／W／P／F／D／E／M，Esc 回到選取。</div>
+    <div class="view" id="view">
+      <button class="ib" id="panBtn" data-tip="平移|H"><svg class="i"><use href="#i-pan"/></svg></button>
+      <span class="sep"></span>
+      <button class="ib" id="zout" data-tip="縮小|Ctrl −"><svg class="i"><use href="#i-zout"/></svg></button>
+      <span class="pct" id="pct">100%</span>
+      <button class="ib" id="zin" data-tip="放大|Ctrl +"><svg class="i"><use href="#i-zin"/></svg></button>
+      <button class="ib" id="fit" data-tip="縮放至全圖|Ctrl 0"><svg class="i"><use href="#i-fit"/></svg></button>
+      <span class="sep"></span>
+      <button class="dim" id="dimBtn" data-tip="切換 2D／3D|Q">2D</button>
+      <button class="ib" id="sliceBtn" data-tip="切面高度"><svg class="i"><use href="#i-slice"/></svg></button>
+      <button class="ib" id="viewBtn" data-tip="檢視設定"><svg class="i"><use href="#i-view"/></svg></button>
+    </div>
+    <div class="pop" id="slicePop" hidden style="left:250px">
+      <h4>切面高度</h4>
+      <input type="range" id="slice" min="0" max="250" value="120" aria-label="切面高度">
+      <div class="row"><span>地面</span><span id="sliceVal">1.2 m</span><span>天花板</span></div>
+    </div>
+  </main>
+
+  <footer class="status">
+    <span class="hint" id="hint"></span>
+    <div class="legend">
+      <b>Wi-Fi 覆蓋範圍</b>
+      <button class="on" data-band>2.4 GHz</button><button data-band>5 GHz</button><button data-band>6 GHz</button>
+      <span>弱</span><span class="bar"><i style="background:#db6178"></i><i style="background:#f2a140"></i><i style="background:#f5cc40"></i><i style="background:#8cc74d"></i><i style="background:#33a866"></i></span><span>強</span>
+    </div>
+    <div class="st-right">
+      <button class="scale-btn" id="scaleBtn">比例尺 · 2 m <svg class="i"><use href="#i-edit"/></svg></button>
+      <span class="sep"></span>
+      <span id="saved">已自動儲存</span>
+    </div>
+  </footer>
+
+  <aside class="panel" id="panel" aria-label="設定面板"><div class="panel-in">
+    <div class="ph"><h2 id="panelTitle"></h2><button class="ib" id="panelClose" aria-label="關閉面板"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="pb" id="panelBody"></div>
+  </div></aside>
+</div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const MATS = [['混凝土','#2f7f86',15],['輕隔間（標準）','#3d5fa8',3],['輕隔間（加強）','#2c7166',4],['玻璃（標準）','#45b8d6',2],['玻璃（薄）','#8fd0e6',1],['磚牆','#b0412e',5],['金屬','#6b7686',10],['木板','#8a5a2b',5]];
+const DEVICES = [['GT-BN98_Pro','ROG'],['BN12','ZenWiFi'],['GS-BE12000','ROG'],['GS-BE18000','ROG'],['GT-BE19000AI','ROG'],['BT8','ZenWiFi'],['TUF-BE6500','TUF'],['RT-BE58 Go','ASUS']];
+const TOOLS = {
+  select: { hint: '點選物件檢視屬性 · 選擇上方工具開始編輯' },
+  wall: { title: '繪製牆面', hint: '點一下設定牆面起點，雙擊結束；按住 Alt 自由角度 · Esc 取消', body: () => `
+    <button class="wide">自動繪製牆面</button>
+    <div class="lbl">繪製方式</div>
+    <div class="seg2" data-seg><button class="on">牆面</button><button>房間</button></div>
+    <div class="lbl">新牆材質</div><div class="sub">套用於接下來繪製的牆。</div>
+    <div class="mat" data-pick>${MATS.map(([n,c,d],i)=>`<button class="${i?'':'on'}"><span class="sw" style="background:${c}"></span><span>${n}</span><span class="db">${d} dB</span><span>${i?'':'✓'}</span></button>`).join('')}</div>` },
+  object: { title: '放置物品', hint: '點兩個對角放置物品，放好後可拖曳、調整大小或旋轉 · Esc 取消', body: () => `
+    <div class="lbl">樓梯間</div>
+    <div class="objs" data-pick>${[0,1,2,3].map(i=>`<button class="${i?'':'on'}" aria-label="樓梯樣式 ${i+1}"><svg class="i" style="width:28px;height:28px"><use href="#i-object"/></svg></button>`).join('')}</div>
+    <div class="lbl">電梯間</div>
+    <div class="objs" data-pick><button aria-label="電梯"><svg class="i" style="width:28px;height:28px"><use href="#i-elev"/></svg></button></div>` },
+  slab: { title: '繪製樓板', hint: '沿著樓板邊緣點出多邊形，回到起點完成 · 2 樓以上才需要', body: () => `
+    <div class="sub" style="margin-top:0">樓板決定上下樓層之間訊號穿透的衰減。</div>
+    <div class="lbl">樓板材質</div>
+    <div class="seg2" data-seg><button class="on">混凝土</button><button>木造</button></div>
+    <div class="lbl">厚度</div><input type="range" min="10" max="40" value="20" aria-label="樓板厚度">` },
+  device: { title: '裝置', hint: '從右側選一台機型，在平面圖上點一下放置 · Esc 結束', body: () => `
+    <div class="seg2" data-seg><button class="on">全部</button><button>我的路由器</button></div>
+    <input class="search" placeholder="搜尋裝置" aria-label="搜尋裝置">
+    <div class="lbl">系列</div><div class="chips" data-chips>${['ROG','TUF','ASUS','ZenWiFi','ExpertWiFi','ProArt'].map(c=>`<button class="chip">${c}</button>`).join('')}</div>
+    <div class="lbl">WiFi</div><div class="chips" data-chips>${['WiFi 8','WiFi 7','WiFi 6E','WiFi 6'].map(c=>`<button class="chip">${c}</button>`).join('')}</div>
+    <div class="devlist">${DEVICES.map(([n,s])=>`<button><span class="ph-img"><svg class="i"><use href="#i-device"/></svg></span>${n}<small>${s}</small></button>`).join('')}</div>` },
+  client: { title: '用戶端體驗', hint: '在平面圖上點一下放置探針，查看用戶端會連上哪一台', body: () => `
+    <div class="sub" style="margin-top:0">放置探針後，這裡會顯示連線的路由器、訊號強度與預估速度。</div>
+    <div class="toggle"><span>顯示連線線條</span><span class="sw2 on" data-sw></span></div>
+    <div class="toggle"><span>跟隨滑鼠預覽</span><span class="sw2" data-sw></span></div>` },
+  mesh: { title: 'Mesh 群組', hint: '把裝置拖進群組，指定一台 CAP、其餘為 RE', body: () => `
+    <div class="groups">${['A','B','C'].map((g,i)=>`<div><span>群組 ${g}</span><span>${i===0?'2 台裝置':'拖曳裝置到這裡'}</span></div>`).join('')}</div>` },
+  view: { title: '檢視設定', hint: '調整顯示方式，不影響平面圖內容', body: () => `
+    ${[['Mesh 回程',1],['裝置名稱',1],['2D 覆蓋範圍',1],['牆外訊號',0]].map(([n,o])=>`<div class="toggle"><span>${n}</span><span class="sw2 ${o?'on':''}" data-sw></span></div>`).join('')}
+    <div class="lbl">裝置圖示大小</div><input type="range" min="50" max="150" value="100" aria-label="裝置圖示大小">
+    <div class="lbl">訊號模型</div>
+    ${[['繞射',1],['反射',1],['其他樓層穿透訊號',1]].map(([n,o])=>`<div class="toggle"><span>${n}</span><span class="sw2 ${o?'on':''}" data-sw></span></div>`).join('')}
+    <button class="wide">全部恢復預設</button>` },
+  scale: { title: '設定比例尺', hint: '在平面圖上點兩點畫出已知長度的線，再輸入實際距離', body: () => `
+    <div class="sub" style="margin-top:0">比例尺決定覆蓋範圍是否準確。可用門寬（約 0.9 m）或標示尺寸的牆面。</div>
+    <div class="lbl">目前比例尺</div><div>2 m ＝ 畫面上 100 px</div>
+    <button class="wide">重新標示一段長度</button>` },
+};
+let tool = 'select', panelKey = null, zoom = 1, panX = 0, panY = 0, three = false, panning = false;
+
+function setTool(t) {
+  tool = t;
+  document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  $('hint').textContent = TOOLS[t].hint;
+  openPanel(t === 'select' ? null : t);
+}
+function openPanel(k) {
+  panelKey = k;
+  $('panel').classList.toggle('open', !!k);
+  $('viewBtn').classList.toggle('on', k === 'view');
+  if (!k) { if (tool === 'select') $('hint').textContent = TOOLS.select.hint; return; }
+  $('panelTitle').textContent = TOOLS[k].title;
+  $('panelBody').innerHTML = TOOLS[k].body();
+  if (k === 'view' || k === 'scale') $('hint').textContent = TOOLS[k].hint;
+  bindPanel();
+}
+function bindPanel() {
+  const b = $('panelBody');
+  b.querySelectorAll('[data-seg]').forEach(g => g.querySelectorAll('button').forEach(x => x.onclick = () => { g.querySelectorAll('button').forEach(y => y.classList.remove('on')); x.classList.add('on'); }));
+  b.querySelectorAll('[data-pick]').forEach(g => g.querySelectorAll('button').forEach(x => x.onclick = () => {
+    document.querySelectorAll('#panelBody [data-pick] button').forEach(y => { y.classList.remove('on'); const c = y.lastElementChild; if (c && c.textContent === '✓') c.textContent = ''; });
+    x.classList.add('on'); const c = x.lastElementChild; if (c && c.tagName === 'SPAN' && !c.className) c.textContent = '✓';
+  }));
+  b.querySelectorAll('[data-chips] .chip').forEach(x => x.onclick = () => x.classList.toggle('on'));
+  b.querySelectorAll('[data-sw]').forEach(x => x.onclick = () => x.classList.toggle('on'));
+}
+function applyView() {
+  $('world').style.transform = `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom})` + (three ? ' perspective(1200px) rotateX(38deg)' : '');
+  $('pct').textContent = Math.round(zoom * 100) + '%';
+}
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1600); }
+
+document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => setTool(tool === b.dataset.tool && b.dataset.tool !== 'select' ? 'select' : b.dataset.tool));
+$('panelClose').onclick = () => { if (panelKey === 'view' || panelKey === 'scale') openPanel(tool === 'select' ? null : tool); else setTool('select'); };
+$('viewBtn').onclick = () => openPanel(panelKey === 'view' ? (tool === 'select' ? null : tool) : 'view');
+$('scaleBtn').onclick = () => openPanel(panelKey === 'scale' ? (tool === 'select' ? null : tool) : 'scale');
+$('zin').onclick = () => { zoom = Math.min(2.5, zoom + .1); applyView(); };
+$('zout').onclick = () => { zoom = Math.max(.3, zoom - .1); applyView(); };
+function fitZoom() { const st = $('stage').getBoundingClientRect(), img = $('world').querySelector('img'); const h = img.naturalHeight ? 900 * img.naturalHeight / img.naturalWidth : 770; return Math.min(1.4, (st.width - 80) / 900, (st.height - 120) / h); }
+$('fit').onclick = () => { zoom = fitZoom(); panX = 0; panY = -20; applyView(); };
+$('dimBtn').onclick = () => { three = !three; $('dimBtn').textContent = three ? '3D' : '2D'; $('stage').classList.toggle('three', three); applyView(); };
+$('panBtn').onclick = () => { panning = !panning; $('panBtn').classList.toggle('on', panning); $('stage').classList.toggle('panning', panning); };
+$('sliceBtn').onclick = e => { e.stopPropagation(); const p = $('slicePop'); p.hidden = !p.hidden; $('sliceBtn').classList.toggle('on', !p.hidden); };
+$('slice').oninput = e => { $('sliceVal').textContent = (e.target.value / 100).toFixed(1) + ' m'; };
+document.addEventListener('click', e => { if (!e.target.closest('#slicePop') && !e.target.closest('#sliceBtn')) { $('slicePop').hidden = true; $('sliceBtn').classList.remove('on'); } });
+document.querySelectorAll('[data-band]').forEach(b => b.onclick = () => { document.querySelectorAll('[data-band]').forEach(x => x.classList.remove('on')); b.classList.add('on'); });
+$('undo').onclick = () => toast('示意：已復原上一步');
+$('redo').onclick = () => toast('示意：已重做');
+$('loginBtn').onclick = () => toast('示意：開啟 ASUS 帳號登入');
+$('floorBtn').onclick = () => toast('示意：切換樓層');
+
+// drag to pan (pan tool on, or right mouse / space like the real app)
+let drag = null;
+$('stage').addEventListener('pointerdown', e => {
+  if (e.target.closest('.view, .pop, .note')) return;
+  if (panning || e.button === 2) { drag = { x: e.clientX - panX, y: e.clientY - panY }; $('stage').setPointerCapture(e.pointerId); }
+});
+$('stage').addEventListener('pointermove', e => { if (drag) { panX = e.clientX - drag.x; panY = e.clientY - drag.y; applyView(); } });
+$('stage').addEventListener('pointerup', () => { drag = null; });
+$('stage').addEventListener('contextmenu', e => e.preventDefault());
+$('stage').addEventListener('wheel', e => { e.preventDefault(); zoom = Math.min(2.5, Math.max(.3, zoom - e.deltaY * .001)); applyView(); }, { passive: false });
+
+// tooltips below the button
+const tip = $('tip');
+document.querySelectorAll('[data-tip]').forEach(b => {
+  b.addEventListener('mouseenter', () => {
+    const [name, key] = b.dataset.tip.split('|');
+    tip.innerHTML = name + (key ? ` <kbd>${key}</kbd>` : '');
+    const r = b.getBoundingClientRect(), up = r.top > innerHeight / 2;
+    tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, Math.max(8, r.left + r.width / 2 - tip.offsetWidth / 2)) + 'px';
+    tip.style.top = (up ? r.top - tip.offsetHeight - 8 : r.bottom + 8) + 'px';
+    tip.classList.add('show');
+  });
+  b.addEventListener('mouseleave', () => tip.classList.remove('show'));
+});
+
+// shortcuts
+const KEYS = { v: 'select', w: 'wall', p: 'object', f: 'slab', d: 'device', e: 'client', m: 'mesh' };
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input, textarea')) return;
+  const k = e.key.toLowerCase();
+  if (k === 'escape') return setTool('select');
+  if (k === 'h') return $('panBtn').click();
+  if (k === 'q') return $('dimBtn').click();
+  if (KEYS[k] && !e.ctrlKey && !e.metaKey) setTool(KEYS[k]);
+});
+
+const img0 = $('world').querySelector('img');
+const doFit = () => $('fit').click();
+if (img0.complete) doFit(); else img0.onload = doFit;
+addEventListener('resize', doFit);
+setTool('select');
+</script>
+</body>
+</html>
