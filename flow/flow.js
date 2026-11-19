@@ -501,11 +501,12 @@
     const rec = store.plans.find(x => x.id === id);
     if (!rec) return;
     capturePlan();
-    Object.assign(state, JSON.parse(JSON.stringify(rec.prefs)));
+    Object.assign(state, JSON.parse(JSON.stringify(rec.prefs)), { round: rec.prefs.round });
     state.prefsDone = true; state.bundleId = null; state.newPlanFrom = null; state.inProgress = false; save();
     if (thenTry) { pickBundle(results().bundles[0]); go('floorplan'); } else go('results');
   }
-  const prefsOf = () => Object.fromEntries(PREF_KEYS.map(k => [k, JSON.parse(JSON.stringify(state[k]))]));
+  // Undefined fields (e.g. no planning round yet) are skipped: JSON.parse(JSON.stringify(undefined)) throws.
+  const prefsOf = () => Object.fromEntries(PREF_KEYS.filter(k => state[k] !== undefined).map(k => [k, JSON.parse(JSON.stringify(state[k]))]));
   const bundleLabel = b => `${b.r.id} × 1${b.N > 1 ? ` ＋ Node ${b.n.id} × ${b.N - 1}` : ''}`;
   const fmtTime = ts => { const d = new Date(ts); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
 
@@ -699,7 +700,7 @@
     capturePlan();
     const plan = store.plans.find(x => x.id === id);
     if (!plan) return;
-    Object.assign(state, JSON.parse(JSON.stringify(plan.prefs)));
+    Object.assign(state, JSON.parse(JSON.stringify(plan.prefs)), { round: plan.prefs.round });
     swapOpen = false; swapTab = null;
     state.bundleId = plan.bundleId || null; state.prefsDone = !plan.free || state.prefsDone; state.newPlanFrom = null; state.seededKey = null;
     store.activeId = plan.id; savePlans();
@@ -1195,7 +1196,7 @@
   // Unfinished questionnaire is not kept across visits: back to the open plan's prefs, or defaults.
   if (state.inProgress || !state.prefsDone) {
     const cur = activePlan();
-    if (cur && !cur.free) state = Object.assign(state, JSON.parse(JSON.stringify(cur.prefs)), { bundleId: cur.bundleId, prefsDone: true });
+    if (cur && !cur.free) state = Object.assign(state, JSON.parse(JSON.stringify(cur.prefs)), { round: cur.prefs.round, bundleId: cur.bundleId, prefsDone: true });
     else state = Object.assign(initial(), { decisionsSeen: state.decisionsSeen || {}, seededKey: state.seededKey === 'blank' ? 'blank' : null });
     state.newPlanFrom = null; state.inProgress = false; save();
   }
