@@ -133,6 +133,43 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 /* toast + demo note */
 .toast { position: fixed; left: 50%; bottom: 60px; transform: translateX(-50%); background: #1d2633; color: #fff; border-radius: 8px; padding: 8px 14px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 200; }
 .toast.show { opacity: 1; }
+/* embedded in the planning flow: the flow's rail replaces this one */
+.embed .app { grid-template-columns: 1fr; grid-template-areas: "top" "stage" "status"; }
+.embed .rail { display: none; }
+.embed .top { padding-left: 12px; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; }
+.embed .proj { gap: 8px; min-width: 0; }
+.embed .proj-name { min-width: 0; font-size: 15px; }
+.embed .proj-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.back { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; color: var(--muted); }
+.back:hover { background: var(--btn-hover); color: var(--ink); }
+.vseg { display: flex; background: var(--btn); border-radius: 8px; padding: 2px; flex-shrink: 0; }
+.vseg button { width: 32px; height: 30px; border-radius: 6px; display: grid; place-items: center; color: var(--muted); }
+.vseg button .i { width: 17px; height: 17px; }
+.vseg button.on { background: var(--card); color: var(--act); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.swap-btn { border: 1.5px solid var(--act); color: var(--act); border-radius: 8px; padding: 6px 12px; font-weight: 500; white-space: nowrap; }
+.swap-btn:hover, .swap-btn.on { background: var(--act); color: #fff; }
+.floor-menu { position: fixed; z-index: 60; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(16,32,56,.14); padding: 6px; min-width: 200px; }
+.floor-menu button { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 6px; }
+.floor-menu button:hover { background: var(--btn-hover); }
+.floor-menu button.on { color: var(--act); font-weight: 600; }
+.floor-menu small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+.world .sheet { width: 100%; background: #fff; border-radius: 4px; box-shadow: var(--shadow); }
+.world svg.walls { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+/* Mesh 拓撲 (placeholder page, kept until its design is decided) */
+.mesh-view { position: absolute; inset: 0; background: var(--canvas); z-index: 8; display: flex; flex-direction: column; }
+.mesh-view[hidden] { display: none; }
+.mesh-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: var(--card); border-bottom: 1px solid var(--line); }
+.mesh-head h2 { margin: 0; font-size: 17px; }
+.mesh-head p { margin: 2px 0 0; font-size: 12px; color: var(--muted); }
+.bands { display: flex; border: 1px solid var(--act); border-radius: 6px; overflow: hidden; }
+.bands button { padding: 5px 12px; color: var(--act); font-size: 13px; }
+.bands button + button { border-left: 1px solid var(--act); }
+.bands button.on { background: var(--act); color: #fff; }
+.mesh-empty { flex: 1; display: grid; place-content: center; justify-items: center; gap: 10px; color: var(--muted); text-align: center; }
+.mesh-empty .i { width: 40px; height: 40px; }
+.mesh-empty b { color: var(--ink); font-weight: 500; font-size: 16px; }
+.mesh-mode .tools { visibility: hidden; }
+
 /* info button + guide popover (replaces the always-on note) */
 .info-btn { width: 30px; height: 30px; border-radius: 50%; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; flex-shrink: 0; font: 700 16px/1 Georgia, serif; font-style: italic; color: var(--act); }
 .info-btn:hover, .info-btn.on { background: var(--act); color: #fff; border-color: var(--act); }
@@ -208,8 +245,9 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
         <button class="ib" id="undo" data-tip="復原|Ctrl Z"><svg class="i"><use href="#i-undo"/></svg></button>
         <button class="ib" id="redo" data-tip="重做|Ctrl Shift Z"><svg class="i"><use href="#i-redo"/></svg></button>
       </div>
+      <button class="swap-btn" id="swapBtn" hidden>試其他套組</button>
       <span class="sep"></span>
-      <div class="login">登入即可儲存進度、跨裝置存取 <button class="login-btn" id="loginBtn">登入</button></div>
+      <div class="login"><span id="loginTxt">登入即可儲存進度、跨裝置存取</span> <button class="login-btn" id="loginBtn">登入</button></div>
       <button class="info-btn" id="infoBtn" data-tip="使用說明" aria-label="使用說明" aria-expanded="false">i</button>
     </div>
   </header>
@@ -234,6 +272,11 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
       <h3 id="gTitle"></h3>
       <p id="gBody"></p>
       <div class="g-foot"><div class="g-dots" id="gDots"></div><div class="g-nav"><button id="gPrev">上一步</button><button class="pri" id="gNext">下一步</button></div></div>
+    </div>
+    <div class="mesh-view" id="meshView" hidden>
+      <div class="mesh-head"><div><h2>Mesh 拓撲</h2><p id="meshSub">示範專案 · 回程等級 · 極佳 ≥ -67 · 良好 ≥ -77 · 不佳 ≥ -85 dBm</p></div>
+        <div class="bands" id="meshBands"><button class="on">2.4 GHz</button><button>5 GHz</button><button>6 GHz</button></div></div>
+      <div class="mesh-empty"><svg class="i"><use href="#i-mesh"/></svg><b>尚未設定任何 Mesh 群組。</b><span>請到編輯器把路由器指派到 A–E 其中一組、每組指定一台 CAP，再回到這個頁面。</span></div>
     </div>
     <div class="view" id="view">
       <button class="ib" id="panBtn" data-tip="平移|H"><svg class="i"><use href="#i-pan"/></svg></button>
@@ -361,7 +404,7 @@ $('viewBtn').onclick = () => openPanel(panelKey === 'view' ? (tool === 'select' 
 $('scaleBtn').onclick = () => openPanel(panelKey === 'scale' ? (tool === 'select' ? null : tool) : 'scale');
 $('zin').onclick = () => { zoom = Math.min(2.5, zoom + .1); applyView(); };
 $('zout').onclick = () => { zoom = Math.max(.3, zoom - .1); applyView(); };
-function fitZoom() { const st = $('stage').getBoundingClientRect(), img = $('world').querySelector('img'); const h = img.naturalHeight ? 900 * img.naturalHeight / img.naturalWidth : 770; return Math.min(1.4, (st.width - 80) / 900, (st.height - 120) / h); }
+function fitZoom() { const st = $('stage').getBoundingClientRect(), h = $('world').offsetHeight || 770; return Math.min(1.4, (st.width - 80) / 900, (st.height - 120) / h); }
 $('fit').onclick = () => { zoom = fitZoom(); panX = 0; panY = -20; applyView(); };
 $('dimBtn').onclick = () => { three = !three; $('dimBtn').textContent = three ? '3D' : '2D'; $('stage').classList.toggle('three', three); applyView(); };
 $('panBtn').onclick = () => { panning = !panning; $('panBtn').classList.toggle('on', panning); $('stage').classList.toggle('panning', panning); };
@@ -377,7 +420,7 @@ $('floorBtn').onclick = () => toast('示意：切換樓層');
 // drag to pan (pan tool on, or right mouse / space like the real app)
 let drag = null;
 $('stage').addEventListener('pointerdown', e => {
-  if (e.target.closest('.view, .pop, .guide, .info-btn')) return;
+  if (e.target.closest('.view, .pop, .guide, .info-btn, .mesh-view')) return;
   if (panning || e.button === 2) { drag = { x: e.clientX - panX, y: e.clientY - panY }; $('stage').setPointerCapture(e.pointerId); }
 });
 $('stage').addEventListener('pointermove', e => { if (drag) { panX = e.clientX - drag.x; panY = e.clientY - drag.y; applyView(); } });
@@ -445,6 +488,74 @@ $('gClose').onclick = () => showGuide(false);
 $('gPrev').onclick = () => { gi = Math.max(0, gi - 1); drawGuide(); };
 $('gNext').onclick = () => { if (gi === GUIDE.length - 1) { gi = 0; return showGuide(false); } gi++; drawGuide(); };
 $('gDots').onclick = e => { const b = e.target.closest('button'); if (b) { gi = [...$('gDots').children].indexOf(b); drawGuide(); } };
+
+// ── Embedded in the planning flow (?embed=1): the flow sends the plan to show ──
+const EMBED = location.hash === '#embed' || new URLSearchParams(location.search).has('embed');
+const toFlow = (action, extra) => parent.postMessage(Object.assign({ type: 'fpw-ed', action }, extra || {}), '*');
+const escH = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const WALL = { concrete: ['#3b4656', 10], brick: ['#a0654a', 7], drywall: ['#9aa6b6', 5] };
+let plan = null, floorIdx = 0;
+function drawFloor() {
+  const f = plan.floors[floorIdx]; if (!f) return;
+  const devs = f.devices.map(d => ({ ...d, l: (d.x + f.w / 2) / f.w * 100, t: (d.y + f.h / 2) / f.h * 100 }));
+  const heatW = Math.max(28, Math.min(70, 1000 / f.w * 100));
+  const heat = l => `<div class="heat" style="left:${l.l - heatW / 2}%;top:calc(${l.t}% - ${heatW / 2 * 9}px);width:${heatW}%;aspect-ratio:1;background:radial-gradient(circle, rgba(75,227,160,.55), rgba(255,210,94,.35) 55%, rgba(255,122,122,0) 75%)"></div>`;
+  const walls = f.walls.length ? `<svg class="walls" viewBox="${-f.w / 2} ${-f.h / 2} ${f.w} ${f.h}" preserveAspectRatio="none">${f.walls.map(([x1, y1, x2, y2, t]) => { const [c, sw] = WALL[t] || WALL.drywall; return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${sw * f.w / 900}" stroke-linecap="square"/>`; }).join('')}</svg>` : '';
+  $('world').innerHTML = (f.img ? `<img src="${f.img}" alt="平面圖">` : `<div class="sheet" style="aspect-ratio:${f.w}/${f.h}"></div>`) + walls
+    + devs.map(heat).join('')
+    + devs.map(d => `<div class="dev" style="left:${d.l}%;top:${d.t}%"><span class="dot"><svg class="i"><use href="#i-device"/></svg></span><span class="name">${escH(d.label)}</span></div>`).join('');
+  $('floorBtn').firstChild.textContent = f.name + ' ';
+  const im = $('world').querySelector('img');
+  if (im && !im.complete) im.onload = doFit; else doFit();
+}
+function setView(mesh) {
+  $('meshView').hidden = !mesh;
+  document.body.classList.toggle('mesh-mode', mesh);
+  document.querySelectorAll('[data-vw]').forEach(b => b.classList.toggle('on', (b.dataset.vw === 'mesh') === mesh));
+  if (mesh) setTool('select');
+  $('hint').textContent = mesh ? 'Mesh 拓撲：顯示各群組 CAP 與 RE 的回程連線品質' : TOOLS[tool].hint;
+}
+if (EMBED) {
+  document.body.classList.add('embed');
+  $('loginTxt').textContent = '登入即可跨裝置儲存';
+  document.querySelector('.proj').innerHTML = `<button class="back" id="backBtn" data-tip="回我的規劃" aria-label="回我的規劃"><svg class="i" style="transform:rotate(90deg)"><use href="#i-down"/></svg></button>
+    <div class="proj-name" id="projName"><span>方案</span></div>
+    <button class="floor" id="floorBtn">1F <svg class="i"><use href="#i-down"/></svg></button>
+    <div class="vseg" role="tablist" aria-label="檢視"><button class="on" data-vw="plan" data-tip="平面圖" aria-label="平面圖"><svg class="i"><use href="#i-grid"/></svg></button><button data-vw="mesh" data-tip="Mesh 拓撲" aria-label="Mesh 拓撲"><svg class="i"><use href="#i-share"/></svg></button></div>`;
+  $('backBtn').onclick = () => toFlow('back');
+  document.querySelectorAll('[data-vw]').forEach(b => (b.onclick = () => setView(b.dataset.vw === 'mesh')));
+  $('meshBands').querySelectorAll('button').forEach(b => (b.onclick = () => $('meshBands').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b))));
+  $('swapBtn').onclick = () => toFlow('swap');
+  $('loginBtn').onclick = () => toFlow('login');
+  $('floorBtn').onclick = e => {
+    e.stopPropagation();
+    const old = document.querySelector('.floor-menu'); if (old) return old.remove();
+    if (!plan || plan.floors.length < 2) return toast('這個方案只有 1 個樓層');
+    const m = document.createElement('div'); m.className = 'floor-menu';
+    m.innerHTML = plan.floors.map((f, i) => `<button data-fi="${i}" class="${i === floorIdx ? 'on' : ''}">${escH(f.name)}<small>${f.devices.length ? escH(f.devices.map(d => d.label).join('、')) : '沒有裝置'}</small></button>`).join('');
+    document.body.appendChild(m);
+    const r = $('floorBtn').getBoundingClientRect(); m.style.left = r.left + 'px'; m.style.top = (r.bottom + 6) + 'px';
+    m.onclick = ev => { const b = ev.target.closest('[data-fi]'); if (b) { floorIdx = +b.dataset.fi; drawFloor(); } m.remove(); };
+  };
+  document.addEventListener('click', e => { const m = document.querySelector('.floor-menu'); if (m && !e.target.closest('.floor-menu')) m.remove(); });
+  // re-attach tooltips to the new buttons
+  document.querySelectorAll('.proj [data-tip]').forEach(b => {
+    b.addEventListener('mouseenter', () => { const [name] = b.dataset.tip.split('|'); tip.textContent = name; const r = b.getBoundingClientRect(); tip.style.left = Math.max(8, r.left + r.width / 2 - tip.offsetWidth / 2) + 'px'; tip.style.top = (r.bottom + 8) + 'px'; tip.classList.add('show'); });
+    b.addEventListener('mouseleave', () => tip.classList.remove('show'));
+  });
+  addEventListener('message', e => {
+    const d = e.data || {};
+    if (d.type === 'fpw-plan') {
+      plan = d.view; floorIdx = Math.min(floorIdx, plan.floors.length - 1);
+      $('projName').innerHTML = `<span title="${escH(plan.label)}">${escH(plan.name)}</span>`;
+      $('meshSub').textContent = `${plan.name} · 回程等級 · 極佳 ≥ -67 · 良好 ≥ -77 · 不佳 ≥ -85 dBm`;
+      $('swapBtn').hidden = !plan.canSwap; $('swapBtn').classList.toggle('on', !!plan.swapOpen);
+      drawFloor();
+    }
+    if (d.type === 'fpw-swap') $('swapBtn').classList.toggle('on', !!d.open);
+  });
+  toFlow('ready');
+}
 
 setTool('select');
 </script>

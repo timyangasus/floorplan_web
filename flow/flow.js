@@ -89,14 +89,45 @@
   // ── Rail ──
   // The rail holds global destinations only; the planning flow itself is linear (see stepper).
   function renderRail(active) {
-    $('rail').innerHTML = `<button class="rail-btn${active === 'home' ? ' active' : ''}" data-to="home" data-tip="首頁" aria-label="首頁">${I.home}</button>`
+    $('rail').innerHTML = '<div class="rail-logo" aria-label="ASUS WiFi Floor Plan"><span class="brand-logo">/A</span></div>'
+      + `<button class="rail-btn${active === 'home' ? ' active' : ''}" data-to="home" data-tip="首頁" aria-label="首頁">${I.home}</button>`
       + `<button class="rail-btn${active === 'plans' ? ' active' : ''}" data-to="plans" data-tip="我的規劃" aria-label="我的規劃${hasNewPlans() ? '（有新資料）' : ''}">${I.plans}${hasNewPlans() ? '<span class="rail-dot"></span>' : ''}</button>`
       + '<div class="rail-spacer"></div>'
-      + `<button class="rail-btn" data-href="router_recommendation_wireframe%201.html" data-tip="後台：機種資料與權重（另開）" aria-label="後台">${I.admin}</button>`
-      + `<button class="rail-btn" data-tip="帳號（示意）" aria-label="帳號">${I.account}</button>`;
+      + `<button class="rail-btn" id="railSettings" data-tip="設定" aria-label="設定" aria-haspopup="dialog">${I.admin}</button>`
+      + `<button class="rail-btn" id="railAccount" data-tip="帳號・登入（示意）" aria-label="帳號">${I.account}</button>`;
     $('rail').querySelectorAll('[data-to]').forEach(b => (b.onclick = () => go(b.dataset.to)));
-    $('rail').querySelectorAll('[data-href]').forEach(b => (b.onclick = () => window.open(b.dataset.href, '_blank')));
+    $('railSettings').onclick = e => { e.stopPropagation(); toggleSettings(); };
+    $('railAccount').onclick = () => toast('示意：開啟 ASUS 帳號登入');
   }
+  // 設定: app-wide preferences (moved here from the editor's own rail: 深淺色、語言) + 後台 link.
+  const SETTINGS = { theme: '淺色', lang: '繁體中文', unit: '公制' };
+  try { Object.assign(SETTINGS, JSON.parse(localStorage.getItem('fpw_settings')) || {}); } catch (e) { /* ignore */ }
+  function toggleSettings(force) {
+    let pop = $('setPop');
+    if (pop || force === false) { if (pop) pop.remove(); return; }
+    pop = document.createElement('div');
+    pop.className = 'set-pop'; pop.id = 'setPop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', '設定');
+    const seg = (k, opts) => `<div class="seg seg-sm">${opts.map(o => `<button data-set="${k}" class="${SETTINGS[k] === o ? 'on' : ''}">${o}</button>`).join('')}</div>`;
+    pop.innerHTML = `<h3>設定</h3>
+      <div class="set-row"><span>外觀</span>${seg('theme', ['淺色', '深色', '跟隨系統'])}</div>
+      <div class="set-row"><span>語言</span><select data-set-lang>${['繁體中文', 'English', '简体中文', '日本語'].map(o => `<option${SETTINGS.lang === o ? ' selected' : ''}>${o}</option>`).join('')}</select></div>
+      <div class="set-row"><span>長度單位</span>${seg('unit', ['公制', '英制'])}</div>
+      <button class="set-link" data-href="router_recommendation_wireframe%201.html"><span>後台：機種資料與權重</span><span>↗</span></button>`;
+    document.body.appendChild(pop);
+    const r = $('railSettings').getBoundingClientRect();
+    pop.style.left = (r.right + 10) + 'px';
+    pop.style.top = Math.max(10, Math.min(innerHeight - pop.offsetHeight - 10, r.bottom - pop.offsetHeight)) + 'px';
+    const keep = () => { try { localStorage.setItem('fpw_settings', JSON.stringify(SETTINGS)); } catch (e) { /* ignore */ } };
+    pop.querySelectorAll('[data-set]').forEach(b => (b.onclick = () => {
+      SETTINGS[b.dataset.set] = b.textContent; keep();
+      pop.querySelectorAll(`[data-set="${b.dataset.set}"]`).forEach(x => x.classList.toggle('on', x === b));
+      toast(`示意：${b.dataset.set === 'theme' ? '外觀' : '長度單位'}已設為「${b.textContent}」`);
+    }));
+    pop.querySelector('[data-set-lang]').onchange = e => { SETTINGS.lang = e.target.value; keep(); toast(`示意：語言已設為「${e.target.value}」`); };
+    pop.querySelector('[data-href]').onclick = e => window.open(e.currentTarget.dataset.href, '_blank');
+  }
+  document.addEventListener('click', e => { if ($('setPop') && !e.target.closest('#setPop, #railSettings')) toggleSettings(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('setPop')) toggleSettings(false); });
 
   // A fresh round of planning: default answers and a new round id, so it always makes a new
   // 推薦紀錄 (saved records/plans stay as they are).
@@ -405,6 +436,9 @@
 
   // ── 3_010 Floor plan (embedded standalone app) ──
   const FP_SRC = 'dist-standalone/floorplan-demo.html';
+  // New editor layout (方向 A, layout only, no real editing). ?editor=old brings back the embedded standalone app.
+  const NEW_EDITOR = new URLSearchParams(location.search).get('editor') !== 'old';
+  const ED_SRC = 'editor_layout_prototype.html#embed';
   const AUTH_KEYS = ['aae_cusid', 'aae_deviceid', 'aae_deviceticket'];
   // The app opens its 積木拼平面圖 builder when this draft exists and the floor has no walls yet.
   const BLOCK_KEY = 'floorplan_blockDraft_demo';
@@ -594,7 +628,7 @@
       proj.scaleSet = false; // the app asks for the scale on an uploaded plan
       proj.floors.forEach((f, i) => {
         f.walls = [];
-        if (i === 0) Object.assign(f, { floorplanImg: url, imageWidth: w, imageHeight: h });
+        if (i === 0) Object.assign(f, { floorplanImg: url, imageWidth: w, imageHeight: h, userImg: true });
         f.routers.forEach((r, k, a) => (r.position = { x: Math.round((-0.5 + (k + 0.5) / a.length) * w * 0.6), y: 0 }));
       });
     }
@@ -722,7 +756,12 @@
     const f = plan.project && plan.project.floors && plan.project.floors[0];
     const walls = (f && f.walls) || [], routers = (f && f.routers) || [];
     const pts = walls.flatMap(w => [w.start, w.end]).concat(routers.map(r => r.position));
-    if (!pts.length) return `<img src="${productImg((plan.bundleId || '').split('|')[0])}" alt="">`;
+    if (!pts.length) {
+      // Uploaded plan: show it; a 自由配置 with nothing yet: the plan icon instead of a broken product image.
+      if (f && f.floorplanImg && (f.userImg || !/^data:image\/jpeg/.test(f.floorplanImg))) return `<img src="${f.floorplanImg}" alt="" style="object-fit:contain;width:100%;height:100%">`;
+      const id = (plan.bundleId || '').split('|')[0];
+      return id ? `<img src="${productImg(id)}" alt="">` : `<span class="quick-ico" style="width:44px;height:44px">${I.plan}</span>`;
+    }
     const xs = pts.map(q => q.x), ys = pts.map(q => q.y), x0 = Math.min(...xs), y0 = Math.min(...ys);
     const w = Math.max(1, Math.max(...xs) - x0), h = Math.max(1, Math.max(...ys) - y0), pad = Math.max(w, h) * .08, sw = Math.max(w, h) / 70;
     return `<svg viewBox="${x0 - pad} ${y0 - pad} ${w + pad * 2} ${h + pad * 2}" preserveAspectRatio="xMidYMid meet">`
@@ -902,6 +941,16 @@
     const orphan = !!plan && !plan.free && !recOf(plan);
     const ids = plan ? plan.bundleId.split('|') : [];
     const mapped = ids.slice(0, 2).filter((id, i, a) => id && a.indexOf(id) === i && FP_MODEL[id] && FP_MODEL[id] !== id);
+    if (NEW_EDITOR) {
+      const canSwap = !!plan && !plan.free && !orphan;
+      edView = editorView(plan, canSwap);
+      el.innerHTML = `<div class="page-full"><div class="ed-stage">${canSwap ? swapDrawer(plan) : ''}<iframe class="ed-frame" id="edFrame" title="居家配置編輯頁" src="${ED_SRC}"></iframe></div></div>`;
+      $('edFrame').onload = sendEditor;
+      bindSwapDrawer(plan, allBundles);
+      if (plan && plan.project.floors.length > 1) note = [note, `這組分在 ${plan.project.floors.length} 個樓層，點上方樓層切換查看`].filter(Boolean).join('；');
+      if (note) pendingToasts.push(setTimeout(() => toast(note), 900));
+      return;
+    }
     // Devices sit on different floors; the app only shows one floor at a time, so offer a floor switcher.
     const floorList = plan && plan.project.floors.length > 1 ? plan.project.floors.map(f => ({ id: f.id, name: f.name, devices: (f.routers || []).map(r => (r.displayName || r.name).replace(' · ', ' ')) })) : [];
     el.innerHTML = `<div class="page-full">
@@ -960,7 +1009,57 @@
     const msg = [note, floorList.length ? `這組分在 ${floorList.length} 個樓層，點上方樓層切換查看` : ''].filter(Boolean);
     msg.forEach((m, i) => pendingToasts.push(setTimeout(() => toast(m), 900 + i * 2200)));
   }
-  let floorSyncTimer, captureTimer, pendingToasts = [], planSetup = null, swapOpen = false, swapTab = null;
+  let floorSyncTimer, captureTimer, pendingToasts = [], planSetup = null, swapOpen = false, swapTab = null, edView = null;
+  // What the new editor layout shows: floors with image or walls, and the devices on them.
+  function editorView(plan, canSwap) {
+    const floors = (plan ? plan.project.floors : []).map(f => {
+      const w = f.imageWidth || 1300, h = f.imageHeight || 1000;
+      const real = !!f.floorplanImg && (f.userImg || !/^data:image\/jpeg/.test(f.floorplanImg));
+      let walls = (f.walls || []).map(x => [x.start.x, x.start.y, x.end.x, x.end.y, x.type]);
+      if (!walls.length && !real) {
+        // 積木拼平面圖 / empty floor: the layout demo shows a sample house instead of the builder.
+        const W = w / 1.3, D = h / 1.3, x0 = -W / 2, y0 = -D / 2;
+        walls = [[x0, y0, x0 + W, y0, 'concrete'], [x0 + W, y0, x0 + W, y0 + D, 'concrete'], [x0 + W, y0 + D, x0, y0 + D, 'concrete'], [x0, y0 + D, x0, y0, 'concrete'],
+          [x0 + W * .55, y0, x0 + W * .55, y0 + D * .6, 'brick'], [x0, y0 + D * .5, x0 + W * .35, y0 + D * .5, 'drywall'], [x0 + W * .55, y0 + D * .6, x0 + W * .8, y0 + D * .6, 'drywall']];
+      }
+      return { name: f.name, w, h, img: real ? f.floorplanImg : '', walls, devices: (f.routers || []).map(r => ({ label: r.displayName || r.name, x: r.position.x, y: r.position.y })) };
+    });
+    if (!floors.length) floors.push({ name: '1F', w: 1300, h: 1000, img: '', walls: [], devices: [] });
+    return { name: plan ? plan.name : '自由試用', label: plan ? plan.label : '', canSwap, swapOpen, floors };
+  }
+  function sendEditor() {
+    const f = $('edFrame');
+    if (f && edView) { edView.swapOpen = swapOpen; f.contentWindow.postMessage({ type: 'fpw-plan', view: edView }, '*'); }
+  }
+  function setSwapOpen(v) {
+    swapOpen = v;
+    if ($('swapDrawer')) $('swapDrawer').classList.toggle('open', v);
+    if ($('swap')) $('swap').classList.toggle('on', v);
+    if ($('edFrame')) $('edFrame').contentWindow.postMessage({ type: 'fpw-swap', open: v }, '*');
+  }
+  // Drawer handlers; switching tabs redraws only the drawer so the editor is not reloaded.
+  function bindSwapDrawer(plan, allBundles) {
+    if (!$('swapDrawer')) return;
+    $('swapClose').onclick = () => setSwapOpen(false);
+    $('swapDrawer').querySelectorAll('[data-swap-tab]').forEach(t => (t.onclick = () => {
+      swapTab = t.dataset.swapTab;
+      const tmp = document.createElement('div'); tmp.innerHTML = swapDrawer(plan);
+      $('swapDrawer').replaceWith(tmp.firstElementChild); bindSwapDrawer(plan, allBundles);
+    }));
+    $('swapDrawer').querySelectorAll('[data-swap]').forEach(btn => (btn.onclick = () => {
+      const nb = allBundles.find(x => bundleKey(x) === btn.dataset.swap);
+      if (nb && plan && bundleKey(nb) !== plan.bundleId) swapBundle(plan, nb);
+    }));
+  }
+  // Messages from the embedded editor layout.
+  window.addEventListener('message', e => {
+    const d = e.data || {};
+    if (d.type !== 'fpw-ed') return;
+    if (d.action === 'ready') sendEditor();
+    if (d.action === 'back') go('plans');
+    if (d.action === 'swap') setSwapOpen(!swapOpen);
+    if (d.action === 'login') toast('示意：開啟 ASUS 帳號登入');
+  });
   // Right-side drawer listing the recommendation's bundles; picking one swaps the plan's devices.
   function swapDrawer(plan) {
     const { models, bundles, allBundles } = results();
@@ -1172,6 +1271,9 @@
     el.scrollTop = 0;
     s.render(el);
     renderRail(s.rail); // pages may add records/plans while rendering: refresh the new-data dot
+    const TITLES = { home: '首頁', needs: '偏好設定', care: '偏好設定', 'home-size': '偏好設定', results: '推薦結果', model: '機種詳情', exit: '前往購買', plans: '我的規劃', floorplan: '居家配置' };
+    $('pageTitle').textContent = TITLES[s.id] || '';
+    document.querySelector('.app').classList.toggle('editor', s.id === 'floorplan' && NEW_EDITOR);
     document.title = 'ASUS WiFi Floor Plan';
   }
   if (new URLSearchParams(location.search).get('demo') === '0') document.body.classList.add('no-demo');

@@ -94,7 +94,7 @@ svg { display: block; }
   background: var(--card);
 }
 .topbar {
-  grid-column: 1 / -1;
+  grid-column: 2; grid-row: 1;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px; border-bottom: 1px solid var(--line); background: var(--card);
 }
@@ -109,6 +109,7 @@ svg { display: block; }
 .icon-btn svg, .rail-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 
 .rail {
+  grid-column: 1; grid-row: 1 / -1;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 18px 0; border-right: 1px solid var(--line); background: var(--card);
 }
@@ -126,7 +127,7 @@ svg { display: block; }
 }
 .rail-spacer { flex: 1; }
 
-.main-col { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.main-col { grid-column: 2; grid-row: 2; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 
 /* Linear flow stepper: 偏好設定 → 推薦結果 → 居家配置 */
 .flow-steps {
@@ -510,7 +511,10 @@ svg { display: block; }
 }
 @media (max-width: 760px) {
   .app { grid-template-columns: 1fr; grid-template-rows: var(--topbar-h) 1fr auto; }
-  .rail { grid-row: 3; flex-direction: row; justify-content: space-around; padding: 6px; border-right: 0; border-top: 1px solid var(--line); }
+  .topbar, .main-col { grid-column: 1; }
+  .rail-logo { display: none; }
+  .app.editor .main-col { grid-row: 1 / 3; }
+  .rail { grid-column: 1; grid-row: 3; flex-direction: row; justify-content: space-around; padding: 6px; border-right: 0; border-top: 1px solid var(--line); }
   .rail-sep, .rail-spacer { display: none; }
   .rail-btn[data-tip]:hover::after { display: none; }
   .page { padding: 22px 16px 40px; }
@@ -744,3 +748,26 @@ svg { display: block; }
 .plans-new { display: flex; gap: 10px; flex-wrap: wrap; }
 .btn-outline-teal { color: #0e8a85; border-color: #2fbfb1; }
 .btn-outline-teal:hover { background: #e6f7f4; }
+
+/* Shell: logo on top of the rail, page title in the top bar, settings popover */
+.page-title { font-size: 16px; font-weight: 600; }
+.rail-logo { width: 50px; height: 38px; display: grid; place-items: center; margin-bottom: 10px; }
+.rail-logo .brand-logo { width: 34px; height: 34px; border-radius: 10px; font-size: 15px; }
+/* Editor page: the editor brings its own top bar */
+.app.editor .topbar { display: none; }
+.app.editor .main-col { grid-row: 1 / -1; }
+.app.editor .content { padding: 0; }
+.set-pop { position: fixed; z-index: 60; width: 300px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 14px 40px rgba(16, 32, 56, .18); padding: 16px 18px; }
+.set-pop h3 { margin: 0 0 12px; font-size: 16px; }
+.set-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.set-row > span { font-size: 13px; color: var(--ink-2); font-weight: 500; }
+.set-row .seg { width: 100%; flex-wrap: nowrap; }
+.set-row .seg button { flex: 1; padding: 5px 6px; white-space: nowrap; }
+.set-row select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.set-link { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0 0; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.set-link:hover { color: var(--accent); }
+/* New editor layout (prototype) embedded in the flow */
+.ed-stage { flex: 1; min-height: 0; position: relative; display: flex; overflow: hidden; }
+.ed-frame { flex: 1; border: 0; width: 100%; min-height: 0; background: #f5f8fc; }
+.ed-stage .swap-drawer { top: 68px; right: 12px; bottom: 53px; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 36px rgba(16, 32, 56, .16); transform: translateX(calc(100% + 24px)); }
+.ed-stage .swap-drawer.open { transform: none; }
